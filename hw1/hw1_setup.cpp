@@ -41,8 +41,8 @@ int main() {
 
 	// printed out result is 6, 6, and 2 when data[0] is 6 to start and the rest 1
 	cout << "[0]: " << data[0] << endl
-			<< "[" << length/2 << "]: " << data[length/2] << endl 
-			<< "[end]: " << data[length-1] << endl; 
+			<< "[" << length/2 << "]: " << data[length/2] << endl
+			<< "[end]: " << data[length-1] << endl;
 
     delete[] data;
 	return 0;
