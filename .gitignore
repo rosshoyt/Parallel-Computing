@@ -1,3 +1,7 @@
 materials/
 build/
 *.dSYM
+# Clion
+.idea/
+CMakeLists.txt
+*/cmake-build-debug
