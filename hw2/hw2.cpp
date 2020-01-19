@@ -17,10 +17,8 @@ using namespace std;
 typedef vector<int> Data;
 
 /**
- * @class Heaper - Base class for an array based, complete binary heap from a provided array
- *
+ * @class Heaper - Base class for an array-based complete binary heap from a provided array of leaf nodes
  */
-
 class Heaper {
 public:
     /**
@@ -44,7 +42,7 @@ protected:
     /**
      * Size of data (n-1 is size of interior)
      */
-    int n;
+    uint32_t n;
 
     /**
      * Original std::vector<int> passed in in constructor, which will be used as the leaf nodes in the heap
@@ -57,65 +55,77 @@ protected:
     Data *interior;
 
     /**
-     * Calculates and returns the total size of Heap including interior and leaf nodes
-     *
-     * @returns number of heap nodes
-     */
-    virtual int size() {
-        return (n-1) + n;
-    }
-    /**
-     *
-     * @return
-     */
-    virtual int height() {
-        return (int)(log2(n));
-
-    }
-    /**
-     *
-     * @param i  tree index to calculate the level for
-     * @return   level in the complete binary tree that index i occupies
-     */
-    virtual int level(int i){
-        return i == 0 ? 0 : (int)(log2(i-1));
-    }
-    /**
      * Gets the value at provided tree index, from the interior or leaf node arrays
      *
      * @param i overall tree index to get value from
      * @returns value at given tree index
      */
-    virtual int value(int i) {
-        //if (i < n-1) return interior->at(i);
-        //else return data->at(i - (n-1));
+    virtual int value(uint32_t i) {
         if(isLeaf(i))
             return data->at(i - (n-1));
         else
             return interior->at(i);
     }
 
-    virtual int parent(int i) {
-        if(i > 0) return interior->at((i-1) / 2);
-        // TODO Handle 0 or Negative i value?
+    /**
+     * Calculates and returns the total size of Heap including interior and leaf nodes
+     *
+     * @returns number of heap nodes
+     */
+    virtual uint32_t size() {
+        return (n-1) + n;
     }
 
     /**
-     * TODO Handling invalid index values in these util methods
+     *
+     * @return
+     */
+//    virtual int height() {
+//        return (int)(log2(n));
+//    }
+
+    /**
+     *
+     * @param i  tree index to calculate the level for
+     * @return   level in the complete binary tree that index i occupies
+     */
+    virtual uint32_t level(uint32_t i) {
+        return i == 0? 1 : (uint32_t)(log2(i) + 1);
+    }
+
+    /**
+     *
      * @param i
      * @return
      */
-    virtual int left(int i) {
-        int leftChildIndex = i * 2 + 1;
-        return isLeaf(i) ? data->at(n-leftChildIndex) : interior->at(leftChildIndex);
-
-    }
-    virtual int right(int i) {
-        int rightChildIndex = i * 2 + 1;
-        return isLeaf(i) ? data->at(n-rightChildIndex) : interior->at(rightChildIndex);
+    virtual uint32_t parent(uint32_t i) {
+        return (i-1) / 2;
     }
 
-    virtual bool isLeaf(int i) { return i  >= n - 1; }
+    /**
+     *
+     * @param i
+     * @return
+     */
+    virtual uint32_t left(uint32_t i) {
+        return i * 2 + 1;
+    }
+
+    /**
+     *
+     * @param i
+     * @return
+     */
+    virtual uint32_t right(uint32_t i) {
+        return i * 2 + 2;
+    }
+
+    /**
+     *
+     * @param i
+     * @return
+     */
+    virtual bool isLeaf(uint32_t i) { return i  >= n; }
 
 };
 
@@ -130,58 +140,69 @@ class SumHeap : public Heaper {
 public:
 
     /**
-     * Heaper constructor which calls parent class, allocating memory for
-     * interior nodes
+     * Heaper constructor which initializes parent class, allocates memory for
+     * interior nodes, and calculates pair-wise sums to fill in the interior nodes
      *
      * @param data pointer to array from which prefix sum will be calculated
      */
     SumHeap(const Data *data) : Heaper(data) {
         calcSum(0);
     }
-    int sum(int node=0) {
+
+    int sum(uint32_t node=0) {
         return value(node);
     }
-    void prefixSums(Data *prefix) {
-        prefixSums(0, 0);
 
+    /**
+     *
+     * @param prefix vector<int> to store prefix sum
+     */
+    void prefixSums(Data *prefix) {
+        prefixSums(prefix, 0, 0);
     }
 
 private:
     static const int MAX_THREADS = 8;
-    const int maxThreadCreationLevel = floor(log2(MAX_THREADS)); // TODO fix
-    void calcSum(int i) {
+    //atomic<int> numThreads;
+    //int maxThreadCreationLevel = (int)log2(MAX_THREADS);
 
-        if(!isLeaf(i) | level(i) > maxThreadCreationLevel)
-            auto handle = async(launch::async, &SumHeap::calcSum, this, left(i), level(i)+1);
+    /**
+     * Recursive method which performs pair-wise summation of provided array, filling interior nodes with
+     * calculated values
+     * @param i the tree index whose child nodes to sum, if it is not a leaf node
+     */
+    void calcSum(uint32_t i) {
+        // Sequential algorithm
+        if(isLeaf(i))
+            return;
+        calcSum(left(i));
+        calcSum(right(i));
+        interior->at(i) = value(left(i)) + value(right(i));
 
-//        if (isLeaf(i))
-//            return;
-//        calcSum(left(i));
-//        calcSum(right(i));
-//        interior->at(i) = value(left(i)) + value(right(i));
+        // Parallel algorithm
+//        if(MAX_THREADS > numThreads && !isLeaf(i)) {
+//            auto handle = async(launch::async, &SumHeap::calcSum, this, right(i));//, level(i) + 1);
+//            ++numThreads; //?
+//        }
     }
 
     /**
-     * TODO fix
+     * Recursive method which calculates the prefix Sums and stores them in the provided prefix array
+     * @param prefix vector<int> where the prefix sums results are stored
+     * @param i      the current index
+     * @param parVal value from parent node
      */
-
-    void prefixSums(int i, int) {
-        if(!isLeaf(i)) {
-            auto handle = async(launch::async, &SumHeap::prefixSums, this, left(i), level + 1);
+    void prefixSums(Data *prefix, uint32_t i, int parVal) {
+        // Sequential algorithm
+        if(isLeaf(i)) {
+            prefix->at(i+1-n) = value(i) + parVal;
+            return;
         }
-        // search left tree
+        prefixSums(prefix, left(i), parVal);
+        prefixSums(prefix, right(i), parVal + value(left(i)));
 
     }
-
-
-
 };
-/*
- * QUESTIONS For K:
- * 1. What is the purpose of passing in the vector into prefix Sums. Should this vector be used during the calculation,
- * or should the prefix sum be copied into this vector
- * 2. What is the purpose of computing the grand total at the root by pair-wise sum first?
- */
 
 const int N = 1<<26; // FIXME must be power of 2 for now
 /**
