@@ -27,8 +27,9 @@ public:
      * Interior nodes are set to 0
      * @param data pointer to array from which prefix sum will be calculated
      */
-    Heaper(const Data *data) : n(data->size()), data(data) {
-        interior = new Data(n - 1, 0);
+    Heaper(const Data *data) : numLeafNodes((uint32_t)data->size()), numInteriorNodes(numLeafNodes-1), data(data) {
+        cout << "In Heaper Constructor\n";
+        interior = new Data(numInteriorNodes, 0);
     }
 
     /**
@@ -42,7 +43,7 @@ protected:
     /**
      * Size of data (n-1 is size of interior)
      */
-    uint32_t n;
+    uint32_t numLeafNodes, numInteriorNodes;
 
     /**
      * Original std::vector<int> passed in in constructor, which will be used as the leaf nodes in the heap
@@ -62,10 +63,29 @@ protected:
      */
     virtual int value(uint32_t i) {
         if(isLeaf(i))
-            return data->at(i - (n-1));
+            //uint32_t leafIndex = i - n;
+            //int val = data->at(leafIndex);
+            //cout<<"Getting Leaf Value "<< val << " from index " << leafIndex << "\n";
+            //return val;
+           //return data->at(globalIndexToLeafIndex(i));
+            return data->at(i - numInteriorNodes);
+
         else
             return interior->at(i);
     }
+    /**
+     * Sets the value of an interior node of the tree.
+     * If a leaf index is passed in, nothing happens because they are const.
+     * @param i index of an interior node
+     * @param value the value to set the node equal to
+     */
+    virtual void setValue(uint32_t i, int value){
+        if(!isLeaf(i)) interior->at(i) = value;
+        else return;
+    }
+
+    //virtual uint32_t globalIndexToLeafIndex(uint32_t i) { return i - numLeafNodes - 1; }
+    virtual uint32_t globalIndexToInteriorIndex(uint32_t i) { return i - numLeafNodes - 1;}
 
     /**
      * Calculates and returns the total size of Heap including interior and leaf nodes
@@ -73,16 +93,8 @@ protected:
      * @returns number of heap nodes
      */
     virtual uint32_t size() {
-        return (n-1) + n;
+        return numLeafNodes + numInteriorNodes;
     }
-
-    /**
-     *
-     * @return
-     */
-//    virtual int height() {
-//        return (int)(log2(n));
-//    }
 
     /**
      *
@@ -90,7 +102,7 @@ protected:
      * @return   level in the complete binary tree that index i occupies
      */
     virtual uint32_t level(uint32_t i) {
-        return i == 0? 1 : (uint32_t)(log2(i) + 1);
+        return 1 + (i == 0 ? 0 : (uint32_t)log2(i));
     }
 
     /**
@@ -121,11 +133,11 @@ protected:
     }
 
     /**
-     *
+     * Checks if a global tree index is a leaf or interior index.
      * @param i
      * @return
      */
-    virtual bool isLeaf(uint32_t i) { return i  >= n; }
+    virtual bool isLeaf(uint32_t i) { return i  >= numInteriorNodes; }
 
 };
 
@@ -146,6 +158,7 @@ public:
      * @param data pointer to array from which prefix sum will be calculated
      */
     SumHeap(const Data *data) : Heaper(data) {
+        cout << "In SumHeap Constructor\n";
         calcSum(0);
     }
 
@@ -163,6 +176,8 @@ public:
 
 private:
     static const int MAX_THREADS = 8;
+
+    // TODO possible thread # tracking solns -
     //atomic<int> numThreads;
     //int maxThreadCreationLevel = (int)log2(MAX_THREADS);
 
@@ -177,9 +192,9 @@ private:
             return;
         calcSum(left(i));
         calcSum(right(i));
-        interior->at(i) = value(left(i)) + value(right(i));
+        setValue(i, value(left(i)) + value(right(i)));
 
-        // Parallel algorithm
+        // TODO Parallel algorithm
 //        if(MAX_THREADS > numThreads && !isLeaf(i)) {
 //            auto handle = async(launch::async, &SumHeap::calcSum, this, right(i));//, level(i) + 1);
 //            ++numThreads; //?
@@ -195,7 +210,7 @@ private:
     void prefixSums(Data *prefix, uint32_t i, int parVal) {
         // Sequential algorithm
         if(isLeaf(i)) {
-            prefix->at(i+1-n) = value(i) + parVal;
+            prefix->at(i+1-numLeafNodes) = value(i) + parVal;
             return;
         }
         prefixSums(prefix, left(i), parVal);
@@ -204,7 +219,7 @@ private:
     }
 };
 
-const int N = 1<<26; // FIXME must be power of 2 for now
+const int N = 1<<26; //1<<26; // FIXME must be power of 2 for now
 /**
  * Provided main method which tests and times the Tree Prefix Sum solution
  */
@@ -215,7 +230,10 @@ int main() {
     // start timer
     auto start = chrono::steady_clock::now();
 
+    cout<<"Testing SumHeap with N size "<<N<<"\nCreating SumHeap...\n";
     SumHeap heap(&data);
+    cout<< "Heap sum = " << heap.sum() << "\n";
+    cout<<"Calculating PrefixSums...\n";
     heap.prefixSums(&prefix);
 
     // stop timer
