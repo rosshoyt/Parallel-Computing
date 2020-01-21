@@ -4,8 +4,9 @@
  * @see "Seattle University, CPSC5600, Winter 2020"
  *
  * Design:
- * 1.
- * 2...
+ * 1. Heaper allocates vector of size N-1 for interior nodes
+ * 2. SumHeap executes pair-wise summation, filling allocated interior nodes
+ * 3...
  */
 #include <iostream>
 #include <vector>
@@ -22,60 +23,62 @@ typedef vector<int> Data;
 class Heaper {
 public:
     /**
-     * Heaper constructor which allocates memory for interior heap nodes.
+     * Constructor which allocates memory for interior heap nodes.
      * Allocates N-1 interior heap nodes in the from a supplied const vector<int> [the leaf nodes]
-     * Interior nodes are set to 0
+     * Interior nodes are initially set to 0
      * @param data pointer to array from which prefix sum will be calculated
      */
     Heaper(const Data *data) : numLeafNodes((uint32_t)data->size()), numInteriorNodes(numLeafNodes-1), data(data) {
-        cout << "In Heaper Constructor\n";
         interior = new Data(numInteriorNodes, 0);
     }
 
     /**
-     * Destructor which deletes allocated memory
+     * Destructor which deletes dynamically allocated memory
      */
     virtual ~Heaper() {
         delete interior;
     }
-
 protected:
     /**
-     * Size of data (n-1 is size of interior)
+     * Size of passed in leaf nodes, and the allocated interior nodes
      */
-    uint32_t numLeafNodes, numInteriorNodes;
+    const uint32_t numLeafNodes;
 
     /**
-     * Original std::vector<int> passed in in constructor, which will be used as the leaf nodes in the heap
+     * Size of allocated interior nodes (
+     * Value = numLeafNodes - 1
+     */
+    const uint32_t numInteriorNodes;
+
+    /**
+     * Original std::vector<int> passed in in the constructor, used as the leaf nodes in the heap
      */
     const Data *data;
 
     /**
-     * Allocated interior nodes
+     * Dynamically allocated interior nodes
      */
     Data *interior;
 
     /**
-     * Gets the value at provided tree index, from the interior or leaf node arrays
+     * Method that gets the value at provided 'global' tree index, from either the interior
+     * or leaf node vectors
      *
-     * @param i overall tree index to get value from
+     * @param i global tree index to get value from
      * @returns value at given tree index
      */
     virtual int value(uint32_t i) {
         if(isLeaf(i))
-            //uint32_t leafIndex = i - n;
-            //int val = data->at(leafIndex);
-            //cout<<"Getting Leaf Value "<< val << " from index " << leafIndex << "\n";
-            //return val;
-           //return data->at(globalIndexToLeafIndex(i));
             return data->at(i - numInteriorNodes);
-
         else
             return interior->at(i);
     }
+
     /**
      * Sets the value of an interior node of the tree.
      * If a leaf index is passed in, nothing happens because they are const.
+     * TODO could remove, only called once
+     *
      * @param i index of an interior node
      * @param value the value to set the node equal to
      */
@@ -84,49 +87,54 @@ protected:
         else return;
     }
 
-    //virtual uint32_t globalIndexToLeafIndex(uint32_t i) { return i - numLeafNodes - 1; }
-    virtual uint32_t globalIndexToInteriorIndex(uint32_t i) { return i - numLeafNodes - 1;}
 
     /**
-     * Calculates and returns the total size of Heap including interior and leaf nodes
+     * Method that calculates the total size of Heap, including interior and leaf nodes
      *
-     * @returns number of heap nodes
+     * @returns total number of heap nodes
      */
     virtual uint32_t size() {
         return numLeafNodes + numInteriorNodes;
     }
 
     /**
+     * Method that calculates the level of a provided 'global' tree index
      *
-     * @param i  tree index to calculate the level for
-     * @return   level in the complete binary tree that index i occupies
+     * @param i  global tree index to calculate the level of
+     * @return   level in the complete binary tree of index i
      */
     virtual uint32_t level(uint32_t i) {
         return 1 + (i == 0 ? 0 : (uint32_t)log2(i));
     }
 
     /**
+     * Method that calculates and returns the index of the provided index's parent node.
+     * If provided index is 0, returns 0
      *
-     * @param i
-     * @return
+     * @param i global tree index to calculate the parent index of
+     * @return  index of parent node
      */
     virtual uint32_t parent(uint32_t i) {
         return (i-1) / 2;
     }
 
     /**
+     * Method that calculates and returns the global index of the left child node of the
+     * provided global tree index
      *
-     * @param i
-     * @return
+     * @param i  the global tree index to calculate the left child index of
+     * @return   the left child index
      */
     virtual uint32_t left(uint32_t i) {
         return i * 2 + 1;
     }
 
     /**
+     * Method that calculates and returns the global index of the right child node of the
+     * provided global tree index
      *
-     * @param i
-     * @return
+     * @param i  the global tree index to calculate the right child index of
+     * @return   the left child index
      */
     virtual uint32_t right(uint32_t i) {
         return i * 2 + 2;
@@ -134,23 +142,21 @@ protected:
 
     /**
      * Checks if a global tree index is a leaf or interior index.
-     * @param i
-     * @return
+     * @param i the index to check
+     * @return  true if the index refers to a leaf node
      */
     virtual bool isLeaf(uint32_t i) { return i  >= numInteriorNodes; }
 
 };
 
 /**
- * @class SumHeap - Class derived from Heaper which adds methods for correct summation into interior nodes, done
- * recursively with he first four levels of recursion forking off threads (total of eight threads). Computes the
- * sum correctly into the interior nodes
- *
- * @returns total size of Heap
+ * @class SumHeap - Class derived from @class Heaper and adds methods for computing the pair-wise summation into
+ * interior nodes, recursively with the first four levels of recursion forking off threads (total of eight threads).
+ * Also, adds parallel Prefix Sum functionality which uses the computed pair-wise summation values to
+ * calculate the pair-wise sum into a user-provided vector.
  */
 class SumHeap : public Heaper {
 public:
-
     /**
      * Heaper constructor which initializes parent class, allocates memory for
      * interior nodes, and calculates pair-wise sums to fill in the interior nodes
@@ -158,33 +164,39 @@ public:
      * @param data pointer to array from which prefix sum will be calculated
      */
     SumHeap(const Data *data) : Heaper(data) {
-        cout << "In SumHeap Constructor\n";
         calcSum(0);
     }
 
+    /**
+     * Method which returns the total sum of the tree, calculated during the pair-wise summation
+     *
+     * @param node the tree index
+     * @return
+     */
     int sum(uint32_t node=0) {
         return value(node);
     }
 
     /**
-     *
-     * @param prefix vector<int> to store prefix sum
+     * Method which calculates the prefix sum of the underlying Data array, and
+     * @param prefix vector<int> to store prefix sum results
      */
     void prefixSums(Data *prefix) {
         prefixSums(prefix, 0, 0);
     }
 
 private:
+    /**
+     * Maximum number of total threads
+     */
     static const int MAX_THREADS = 8;
 
-    // TODO possible thread # tracking solns -
-    //atomic<int> numThreads;
-    //int maxThreadCreationLevel = (int)log2(MAX_THREADS);
 
     /**
-     * Recursive method which performs pair-wise summation of provided array, filling interior nodes with
-     * calculated values
-     * @param i the tree index whose child nodes to sum, if it is not a leaf node
+     * Recursive method, called from constructor, which performs pair-wise summation of provided vector,
+     * filling interior nodes with calculated values
+     *
+     * @param i the tree index whose child nodes to sum
      */
     void calcSum(uint32_t i) {
         // Sequential algorithm
@@ -203,6 +215,7 @@ private:
 
     /**
      * Recursive method which calculates the prefix Sums and stores them in the provided prefix array
+     *
      * @param prefix vector<int> where the prefix sums results are stored
      * @param i      the current index
      * @param parVal value from parent node
@@ -215,30 +228,34 @@ private:
         }
         prefixSums(prefix, left(i), parVal);
         prefixSums(prefix, right(i), parVal + value(left(i)));
-
     }
 };
 
-const int N = 1<<26; //1<<26; // FIXME must be power of 2 for now
+const int N = 1<<26; // FIXME must be power of 2 for now
+
 /**
  * Provided main method which tests and times the Tree Prefix Sum solution
+ *
+ * @returns 0 (success)
  */
 int main() {
-    Data data(N, 1); // put a 1 in each element of the data array
+    Data data(N, 1);
     Data prefix(N, 1);
+
+    // Debug msg
+    cout << "Welcome to HW2 Solution.\nCreating SumHeap with N size = " << N << endl;
 
     // start timer
     auto start = chrono::steady_clock::now();
-
-    cout<<"Testing SumHeap with N size "<<N<<"\nCreating SumHeap...\n";
     SumHeap heap(&data);
-    cout<< "Heap sum = " << heap.sum() << "\n";
-    cout<<"Calculating PrefixSums...\n";
     heap.prefixSums(&prefix);
-
     // stop timer
     auto end = chrono::steady_clock::now();
     auto elapsed = chrono::duration<double,milli>(end-start).count();
+
+    // Debug msg
+    cout<< "DEBUG: Heap Pair-wise sum = " << heap.sum() << endl;
+
     int check = 1;
     for (int elem: prefix)
         if (elem != check++) {
