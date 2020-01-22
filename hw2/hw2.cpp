@@ -13,6 +13,7 @@
 #include <chrono>
 #include <future>
 #include <cmath>  // for log2, floor
+#include <stdio.h>
 using namespace std;
 
 typedef vector<int> Data;
@@ -164,8 +165,8 @@ public:
      *
      * @param data pointer to array from which prefix sum will be calculated
      */
-    SumHeap(const Data *data) : Heaper(data) {
-        calcSum(0, 1);
+    SumHeap(const Data *data) : Heaper(data), pairSumThreads(), prefixSumThreads() {
+        calcSums();
     }
 
     /**
@@ -193,15 +194,26 @@ private:
      */
     static const int MAX_THREADS = 8;
 
+    vector<future<void>> pairSumThreads, prefixSumThreads;
+
     /**
-     * Method that checks if the provided tree level should fork worker threads in pair-wise or prefix-sum calculations
+     * Utility method that checks if the provided tree level should fork worker threads based on the MAX_THREADS constant
+     * in pair-wise or prefix-sum calculations.
      *
      * @param level  the tree level to check
-     * @returns true if the level should fork
+     * @returns true if the given level can fork threads
      */
     bool shouldFork(const uint32_t level){
         return MAX_THREADS>>level > 0;
     }
+
+
+
+    void calcSums() {
+        calcSum(0, 1);
+    }
+
+
     /**
      * Recursive method, called from constructor, which performs a parallel pair-wise summation of provided vector,
      * filling interior nodes with calculated values.
@@ -216,13 +228,19 @@ private:
         calcSum(left(i), level+1);
         // Fork off threads for first 4 levels of recursion
         if(shouldFork(level)) {
-            cout << "Creating calcSum thread for level = " << level << "\n";
+            printf("Creating calcSum thread for level = %d\n", level);
+            //cout << "Creating calcSum thread for level = " << level << "\n";
             auto handle = async(launch::async, &SumHeap::calcSum, this, right(i), level+1);
-            //handle.wait(); // TODO need this line?
-        } else
-            calcSum(right(i), level+1);
+            pairSumThreads.push_back(move(handle));
+            interior->at(i) = value(left(i)) + value(right(i));
 
-        interior->at(i) = value(left(i)) + value(right(i));
+        } else {
+
+            calcSum(right(i), level + 1);
+            interior->at(i) = value(left(i)) + value(right(i));
+        }
+
+
 
     }
 
@@ -241,9 +259,11 @@ private:
         prefixSum(prefix, left(i), parVal, level+1);
         // Fork off threads for first 4 levels of recursion
         if(shouldFork(level)) {
-            cout << "Creating PrefixSum thread for level = " << level << "\n";
+            printf("Creating prefixSum thread for level = %d\n", level);
+            //cout << "Creating PrefixSum thread for level = " << level << "\n";
             auto handle = async(launch::async, &SumHeap::prefixSum, this, prefix, right(i), parVal + value(left(i)), level+1);
-            return handle.wait(); // TODO need this line?
+            prefixSumThreads.push_back(move(handle));
+            //return handle.wait();
         } else
             prefixSum(prefix, right(i), parVal + value(left(i)), level+1);
     }
@@ -300,7 +320,7 @@ int main() {
     // start timer
     auto start = chrono::steady_clock::now();
     SumHeap heap(&data);
-    heap.prefixSums(&prefix);
+    //heap.prefixSums(&prefix);
     // stop timer
     auto end = chrono::steady_clock::now();
     auto elapsed = chrono::duration<double,milli>(end-start).count();
