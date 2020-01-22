@@ -1,4 +1,4 @@
-CPPFLAGS = -std=c++11 -Wall -Werror -pedantic -ggdb -pthread -O2
+CPPFLAGS = -std=c++11 -Wall -Werror -pedantic -ggdb -pthread
 
 # example : example.cpp ThreadGroup.h
 #	g++ $(CPPFLAGS) $< -o $@
@@ -6,8 +6,11 @@ CPPFLAGS = -std=c++11 -Wall -Werror -pedantic -ggdb -pthread -O2
 hw2 : hw2.cpp
 	g++ $(CPPFLAGS) $< -o $@
 
-clean:
-	@rm -r hw2 *.dSYM
+hw2-optimized : hw2.cpp
+	g++ $(CPPFLAGS) $< -O2 -o $@
 
-all : hw2
+clean:
+	@rm -r hw2 hw2-optimized *.dSYM
+
+all : hw2 hw2-optimized
 	@echo "Made it all!"
