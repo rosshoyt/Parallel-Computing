@@ -5,8 +5,8 @@
  *
  * Design:
  * 1. Heaper allocates vector of size N-1 for interior nodes
- * 2. SumHeap executes pair-wise summation, filling allocated interior nodes
- * 3...
+ * 2. SumHeap executes parallel pair-wise summation, building heap into allocated interior nodes
+ * 3. SumHeap executes parallel prefix-sum computation, filling provided vector with result
  */
 #include <iostream>
 #include <vector>
@@ -162,6 +162,11 @@ public:
      * Heaper constructor which initializes parent class, allocates memory for
      * interior nodes, and calculates pair-wise sums to fill in the interior nodes
      *
+     * Note: Field 'HEIGHT' is not currently used, but I was considering creating a sequential cutoff to increase
+     * performance, where the sequential algorithm gets called based on the height of tree being compared to
+     * current node level, and having a subtree of ~1024 size to be calculated sequentailly. The same approach would be
+     * applied to prefixSum.
+     *
      * @param data pointer to array from which prefix sum will be calculated
      */
     SumHeap(const Data *data) : Heaper(data) {
@@ -218,13 +223,30 @@ private:
         if(shouldFork(level)) {
             cout << "Creating calcSum thread for level = " << level << "\n";
             auto handle = async(launch::async, &SumHeap::calcSum, this, right(i), level+1);
-            //handle.wait(); // TODO need this line?
+            // NOTE I believe that my threads are being sequentially created and are waiting causing slow performance...
+            // I'm not sure if this has to do with how I'm using std::future<void>
+
+        /* NOTE Here is perhaps where a sequential cutoff could go possibly goto improve performance.
+        } else if(int subtreeHeight = HEIGHT-level <= 10) {
+            // SEQUENTIAL CUTOFF PORTION at subtrees of height 10 (1024 elements), e.g:
+            calcSumIterative(i, subtreeHeight);*/
+
         } else
-            calcSum(right(i), level+1);
+            calcSum(right(i), level + 1);
 
         interior->at(i) = value(left(i)) + value(right(i));
 
     }
+
+
+    /**
+     * Optimized sequential function which is called when calcSum reaches cutoff
+     * @param i index of subtree to sum sequentially
+     */
+    void calcSumIterative(uint32_t i, int subtreeHeight) {
+        // Optimized Sequential Code
+    }
+
 
     /**
      * Recursive method which calculates the prefix Sums in parallel and stores them in the provided prefix array
