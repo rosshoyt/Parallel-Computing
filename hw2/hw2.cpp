@@ -99,6 +99,7 @@ protected:
 
     /**
      * Method that calculates the level of a provided 'global' tree index
+     * A root node has level = 1, its child node(s) has level = 2, etc.
      *
      * @param i  global tree index to calculate the level of
      * @return   level in the complete binary tree of index i
@@ -165,6 +166,7 @@ public:
      */
     SumHeap(const Data *data) : Heaper(data) {
         calcSum(0);
+        //calcSumSequential(0);
     }
 
     /**
@@ -178,56 +180,93 @@ public:
     }
 
     /**
-     * Method which calculates the prefix sum of the underlying Data array, and
-     * @param prefix vector<int> to store prefix sum results
+     * Method which calculates the prefix sum of the underlying Data array, and fills provided vector with results
+     *
+     * @param prefix vector<int> of size N-1 to store prefix sum results
      */
     void prefixSums(Data *prefix) {
-        prefixSums(prefix, 0, 0);
+        prefixSum(prefix, 0, 0);
     }
 
 private:
     /**
-     * Maximum number of total threads
+     * Maximum number of threads including the main thread
      */
     static const int MAX_THREADS = 8;
 
-
     /**
-     * Recursive method, called from constructor, which performs pair-wise summation of provided vector,
-     * filling interior nodes with calculated values
+     * Recursive method, called from constructor, which performs a parallel pair-wise summation of provided vector,
+     * filling interior nodes with calculated values.
+     * Creates up to 8 threads
      *
      * @param i the tree index whose child nodes to sum
      */
     void calcSum(uint32_t i) {
-        // Sequential algorithm
         if(isLeaf(i))
             return;
-        calcSum(left(i));
-        calcSum(right(i));
-        setValue(i, value(left(i)) + value(right(i)));
 
-        // TODO Parallel algorithm
-//        if(MAX_THREADS > numThreads && !isLeaf(i)) {
-//            auto handle = async(launch::async, &SumHeap::calcSum, this, right(i));//, level(i) + 1);
-//            ++numThreads; //?
-//        }
+        calcSum(left(i));
+        // Fork off threads for first 4 levels of recursion
+        if(MAX_THREADS>>level(i)) {
+            cout << "Creating calcSum thread\n";
+            auto handle = async(launch::async, &SumHeap::calcSum, this, right(i));
+            //handle.get(); // TODO need this line?
+        } else
+            calcSum(right(i));
+
+        interior->at(i) = value(left(i)) + value(right(i));
+
     }
 
     /**
-     * Recursive method which calculates the prefix Sums and stores them in the provided prefix array
+     * Recursive method which performs sequential pair-wise summation of provided vector,
+     * filling interior nodes with calculated values.
+     *
+     * @param i the tree index whose child nodes to sum
+     */
+    void calcSumSequential(uint32_t i) {
+        if(isLeaf(i))
+            return;
+        calcSumSequential(left(i));
+        calcSumSequential(right(i));
+        interior->at(i) = value(left(i)) + value(right(i));
+    }
+
+    /**
+     * Recursive method which calculates the prefix Sums in parallel and stores them in the provided prefix array
      *
      * @param prefix vector<int> where the prefix sums results are stored
      * @param i      the current index
      * @param parVal value from parent node
      */
-    void prefixSums(Data *prefix, uint32_t i, int parVal) {
-        // Sequential algorithm
+    void prefixSum(Data *prefix, uint32_t i, int parVal) {
         if(isLeaf(i)) {
             prefix->at(i+1-numLeafNodes) = value(i) + parVal;
             return;
         }
-        prefixSums(prefix, left(i), parVal);
-        prefixSums(prefix, right(i), parVal + value(left(i)));
+        prefixSum(prefix, left(i), parVal);
+        // Fork off threads for first 4 levels of recursion
+        if(MAX_THREADS>>level(i)) {
+            cout << "Creating PrefixSum thread\n";
+            auto handle = async(launch::async, &SumHeap::prefixSum, this, prefix, right(i), parVal + value(left(i)));
+        } else
+            prefixSum(prefix, right(i), parVal + value(left(i)));
+    }
+
+    /**
+     * Recursive method which calculates the prefix Sums sequentially and stores them in the provided prefix array
+     *
+     * @param prefix vector<int> where the prefix sums results are stored
+     * @param i      the current index
+     * @param parVal value from parent node
+     */
+    void prefixSumSequential(Data *prefix, uint32_t i, int parVal) {
+        if(isLeaf(i)) {
+            prefix->at(i+1-numLeafNodes) = value(i) + parVal;
+            return;
+        }
+        prefixSumSequential(prefix, left(i), parVal);
+        prefixSumSequential(prefix, right(i), parVal + value(left(i)));
     }
 };
 
