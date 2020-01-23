@@ -1,7 +1,11 @@
 materials/
 build/
 *.dSYM
-# Clion
+
+# Clion ignores
 .idea/
 CMakeLists.txt
 */cmake-build-debug
+
+# IntelliJ ignores
+*.iml
