@@ -12,7 +12,7 @@
 #include <vector>
 #include <chrono>
 #include <future>
-#include <cmath>  // for log2, floor
+#include <cmath>  // for log2
 using namespace std;
 
 typedef vector<int> Data;
@@ -26,7 +26,8 @@ public:
      * Constructor which allocates memory for interior heap nodes.
      * Allocates N-1 interior heap nodes in the from a supplied const vector<int> [the leaf nodes]
      * Interior nodes are initially set to 0
-     * @param data pointer to array from which prefix sum will be calculated
+     *
+     * @param data pointer to const vector<int> from which prefix sum will be calculated
      */
     Heaper(const Data *data) : numLeafNodes((uint32_t)data->size()), numInteriorNodes(numLeafNodes-1), data(data) {
         interior = new Data(numInteriorNodes, 0);
@@ -162,11 +163,6 @@ public:
      * Heaper constructor which initializes parent class, allocates memory for
      * interior nodes, and calculates pair-wise sums to fill in the interior nodes
      *
-     * Note: Field 'HEIGHT' is not currently used, but I was considering creating a sequential cutoff to increase
-     * performance, where the sequential algorithm gets called based on the height of tree being compared to
-     * current node level, and having a subtree of ~1024 size to be calculated sequentailly. The same approach would be
-     * applied to prefixSum.
-     *
      * @param data pointer to array from which prefix sum will be calculated
      */
     SumHeap(const Data *data) : Heaper(data) {
@@ -212,41 +208,23 @@ private:
      * filling interior nodes with calculated values.
      * Creates up to 8 threads
      *
-     * @param i the tree index whose child nodes to sum
+     * @param i     the tree index whose child nodes to sum
+     * @param level the tree level of current index
      */
     void calcSum(uint32_t i, uint32_t level) {
         if(isLeaf(i))
             return;
-
-        calcSum(left(i), level+1);
         // Fork off threads for first 4 levels of recursion
         if(shouldFork(level)) {
-            cout << "Creating calcSum thread for level = " << level << "\n";
-            auto handle = async(launch::async, &SumHeap::calcSum, this, right(i), level+1);
-            // NOTE I believe that my threads are being sequentially created and are waiting causing slow performance...
-            // I'm not sure if this has to do with how I'm using std::future<void>
-
-        /* NOTE Here is perhaps where a sequential cutoff could go possibly goto improve performance.
-        } else if(int subtreeHeight = HEIGHT-level <= 10) {
-            // SEQUENTIAL CUTOFF PORTION at subtrees of height 10 (1024 elements), e.g:
-            calcSumIterative(i, subtreeHeight);*/
-
-        } else
+            auto handle = async(launch::async, &SumHeap::calcSum, this, left(i), level + 1);
             calcSum(right(i), level + 1);
-
+            handle.wait();
+        } else {
+            calcSum(left(i),  level + 1);
+            calcSum(right(i), level + 1);
+        }
         interior->at(i) = value(left(i)) + value(right(i));
-
     }
-
-
-    /**
-     * Optimized sequential function which is called when calcSum reaches cutoff
-     * @param i index of subtree to sum sequentially
-     */
-    void calcSumIterative(uint32_t i, int subtreeHeight) {
-        // Optimized Sequential Code
-    }
-
 
     /**
      * Recursive method which calculates the prefix Sums in parallel and stores them in the provided prefix array
@@ -260,14 +238,15 @@ private:
             prefix->at(i+1-numLeafNodes) = value(i) + parVal;
             return;
         }
-        prefixSum(prefix, left(i), parVal, level+1);
         // Fork off threads for first 4 levels of recursion
         if(shouldFork(level)) {
-            cout << "Creating PrefixSum thread for level = " << level << "\n";
-            auto handle = async(launch::async, &SumHeap::prefixSum, this, prefix, right(i), parVal + value(left(i)), level+1);
-            return handle.wait(); // TODO need this line?
-        } else
+            auto handle = async(launch::async, &SumHeap::prefixSum, this, prefix, left(i), parVal, level+1);
             prefixSum(prefix, right(i), parVal + value(left(i)), level+1);
+            handle.wait();
+        } else {
+            prefixSum(prefix, left(i), parVal, level+1);
+            prefixSum(prefix, right(i), parVal + value(left(i)), level + 1);
+        }
     }
 
     /**
@@ -284,7 +263,6 @@ private:
         interior->at(i) = value(left(i)) + value(right(i));
     }
 
-
     /**
      * Recursive method which calculates the prefix Sums sequentially and stores them in the provided prefix array
      *
@@ -300,9 +278,6 @@ private:
         prefixSumSequential(prefix, left(i), parVal);
         prefixSumSequential(prefix, right(i), parVal + value(left(i)));
     }
-
-
-
 };
 
 const int N = 1<<26; // FIXME must be power of 2 for now
@@ -316,9 +291,6 @@ int main() {
     Data data(N, 1);
     Data prefix(N, 1);
 
-    // Debug msg
-    cout << "Welcome to HW2 Solution.\nCreating SumHeap with N size = " << N << endl;
-
     // start timer
     auto start = chrono::steady_clock::now();
     SumHeap heap(&data);
@@ -326,9 +298,6 @@ int main() {
     // stop timer
     auto end = chrono::steady_clock::now();
     auto elapsed = chrono::duration<double,milli>(end-start).count();
-
-    // Debug msg
-    cout<< "DEBUG: Heap Pair-wise sum = " << heap.sum() << endl;
 
     int check = 1;
     for (int elem: prefix)
