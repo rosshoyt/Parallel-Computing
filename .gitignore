@@ -9,3 +9,4 @@ CMakeLists.txt
 
 # IntelliJ ignores
 *.iml
+/out
