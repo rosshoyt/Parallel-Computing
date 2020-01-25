@@ -14,6 +14,8 @@ import java.util.concurrent.TimeUnit;
  * one-thread sort).
  */
 public class StageOne implements Runnable {
+    private static final int timeout = 10;  // in seconds
+
     /**
      * Static method that just sorts the given array.
      *
@@ -30,9 +32,13 @@ public class StageOne implements Runnable {
      * @param input  where to read the unordered input array
      * @param output where to write the sorted array
      */
-    public StageOne(SynchronousQueue<double[]> input, SynchronousQueue<double[]> output) {
+    public StageOne(SynchronousQueue<double[]> input, SynchronousQueue<double[]> output, String name) {
         this.input = input;
         this.output = output;
+        this.name = name;
+    }
+    public StageOne(SynchronousQueue<double[]> input, SynchronousQueue<double[]> output) {
+        this(input, output, "");
     }
 
     /**
@@ -44,10 +50,12 @@ public class StageOne implements Runnable {
         double[] array = new double[1];
         while (array != null) {
             try {
-                array = input.poll(1000, TimeUnit.MILLISECONDS);
+                array = input.poll(timeout * 1000, TimeUnit.MILLISECONDS);
                 if (array != null) {
                     process(array);
-                    output.offer(array, 1000, TimeUnit.MILLISECONDS);
+                    output.offer(array, timeout * 1000, TimeUnit.MILLISECONDS);
+                } else {
+                    System.out.println(getClass().getName() + " " + name + " got null array");
                 }
             } catch (InterruptedException e) {
                 return;
@@ -56,5 +64,6 @@ public class StageOne implements Runnable {
     }
 
     private SynchronousQueue<double[]> input, output;
+    private String name;
 }
 

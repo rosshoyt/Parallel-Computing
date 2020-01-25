@@ -6,10 +6,11 @@
 
 
 /**
- * BitonicSequential class per cpsc5600 hw3 specification.
+ * @class BitonicSequential class per cpsc5600 hw3 specification.
+ * @versioon 24-Jan-2020
  */
 public class BitonicSequential {
-    public static final int N = 1 << 22;
+    public static final int N = 1 << 22;  // size of the final sorted array (power of two)
     public static final int TIME_ALLOWED = 10;  // seconds
 
     /**
@@ -23,7 +24,7 @@ public class BitonicSequential {
         while (System.currentTimeMillis() < start + TIME_ALLOWED * 1000) {
             double[][] data = new double[4][];
             for (int section = 0; section < data.length; section++) {
-                data[section] = RandomArrayGenerator.getArray(N);
+                data[section] = RandomArrayGenerator.getArray(N/4);
                 StageOne.process(data[section]);  // Just sorts it
             }
             // Note that BitonicStage assumes both its input arrays are sorted
@@ -34,7 +35,7 @@ public class BitonicSequential {
             double[] penult1 = bitonic.process(data[0], data[1]);
             double[] penult2 = bitonic.process(data[2], data[3]);
             double[] ult = bitonic.process(penult1, penult2);
-            if (!RandomArrayGenerator.isSorted(ult))
+            if (!RandomArrayGenerator.isSorted(ult) || N != ult.length)
                 System.out.println("failed");
             work++;
         }

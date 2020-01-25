@@ -4,7 +4,7 @@
  * This is free and unencumbered software released into the public domain.
  */
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -15,6 +15,8 @@ import java.util.concurrent.TimeUnit;
  * For convenience, also includes a static sort-checker.
  */
 public class RandomArrayGenerator implements Runnable {
+    private static final int timeout = 10;  // in seconds
+
     /**
      * Construct a random array generator that will write to the given output.
      *
@@ -33,7 +35,7 @@ public class RandomArrayGenerator implements Runnable {
     public void run() {
         while (true)
             try {
-                output.offer(getArray(n), 1000, TimeUnit.MILLISECONDS);
+                output.offer(getArray(n), timeout * 1000, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 return;
             }
@@ -48,7 +50,7 @@ public class RandomArrayGenerator implements Runnable {
     public static double[] getArray(int n) {
         double ret[] = new double[n];
         for (int i = 0; i < n; i++)
-            ret[i] = rand.nextDouble() * 100.0;
+            ret[i] = ThreadLocalRandom.current().nextDouble() * 100.0;
         return ret;
     }
 
@@ -60,7 +62,7 @@ public class RandomArrayGenerator implements Runnable {
      */
     public static boolean isSorted(double[] a) {
         if (a == null)
-            return true;
+            return false;
         double last = a[0];
         for (int i = 1; i < a.length; i++) {
             if (a[i] < last) {
@@ -74,7 +76,6 @@ public class RandomArrayGenerator implements Runnable {
         return true;
     }
 
-    private static Random rand = new Random();
     private SynchronousQueue<double[]> output;
     private int n;
 }
