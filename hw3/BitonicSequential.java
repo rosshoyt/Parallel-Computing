@@ -4,7 +4,6 @@
  * This is free and unencumbered software released into the public domain.
  */
 
-
 /**
  * @class BitonicSequential class per cpsc5600 hw3 specification.
  * @versioon 24-Jan-2020
