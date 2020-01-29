@@ -1,12 +1,16 @@
+# assignment content
 materials/
+
+# compilation
 build/
 *.dSYM
+*.class
 
-# Clion ignores
+# Clion
 .idea/
 CMakeLists.txt
 */cmake-build-debug
 
-# IntelliJ ignores
+# IntelliJ
 *.iml
 /out
