@@ -5,15 +5,15 @@
  */
 
 /**
- * @class BitonicSequential class per cpsc5600 hw3 specification.
- * @versioon 24-Jan-2020
+ * @class BitonicSequential clasws per cpsc5600 hw3 specification.
+ * @version 24-Jan-2020
  */
 public class BitonicSequential {
-    public static final int N = 1 << 22;  // size of the final sorted array (power of two)
+    public static final int N = 1 << 5;  // size of the final sorted array (power of two)
     public static final int TIME_ALLOWED = 10;  // seconds
 
     /**
-     * Main entry for HW3 assignment.
+     * Main entry for HW3 assignment
      *
      * @param args not used
      */
