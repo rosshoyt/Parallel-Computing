@@ -1,4 +1,4 @@
-/*
+package hw3;/*
  * Kevin Lundeen
  * CPSC 5600, Seattle University
  * This is free and unencumbered software released into the public domain.

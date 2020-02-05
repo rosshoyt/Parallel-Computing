@@ -1,4 +1,5 @@
-/*
+package hw3;/*
+ * BitonicSequential.java
  * Kevin Lundeen
  * CPSC 5600, Seattle University
  * This is free and unencumbered software released into the public domain.
@@ -9,7 +10,7 @@
  * @version 24-Jan-2020
  */
 public class BitonicSequential {
-    public static final int N = 1 << 5;  // size of the final sorted array (power of two)
+    public static final int N = 1 <<22;  // size of the final sorted array (power of two)
     public static final int TIME_ALLOWED = 10;  // seconds
 
     /**

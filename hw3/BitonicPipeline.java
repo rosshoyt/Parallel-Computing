@@ -1,3 +1,4 @@
+package hw3;
 /*
  * Ross Hoyt
  * CPSC 5600, Seattle University
@@ -16,7 +17,6 @@ public class BitonicPipeline {
    public static final int N = 1 << 22,  // size of the final sorted array (power of two)
                            TIME_ALLOWED = 10,  // seconds
                            TIMEOUT = 10;  // in seconds (max wait for an output)
-
 
    private static final int N_ARRAY_GENS = 4,
                             N_STAGE_ONES = N_ARRAY_GENS,
