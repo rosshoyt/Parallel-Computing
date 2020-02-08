@@ -1,61 +1,37 @@
 package hw5;
 
+import utils.RandomArrayGenerator;
+
+import org.junit.Before;
 import org.junit.Test;
-
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 
+import static java.util.stream.Collectors.toList;
 
+/**
+ * Test of GeneralScan.java using the simple concrete implementation DoubleHeap.java
+ */
 public class GeneralScanTest {
+   private int N = 1<<6;
+   private List<Double> testList;
+   private Double testListReduction;
 
-   class SumHeapDemo extends GeneralScan<Integer, Integer, Integer>{
-      public SumHeapDemo(List<Integer> raw) {
-         super(raw);
-      }
-
-      @Override
-      protected Integer init() {
-         return 0;
-      }
-
-      @Override
-      protected Integer prepare(Integer datum) {
-         return datum;
-      }
-
-      @Override
-      protected Integer combine(Integer left, Integer right) {
-         return left + right;
-      }
-
-      @Override
-      protected Integer gen(Integer tally) {
-         return tally;
-      }
+   @Before
+   public void setUp() throws Exception {
+      testList = DoubleStream.of(RandomArrayGenerator.getArray(N)).boxed().collect(toList());
+      testListReduction = getReductionSequentially(testList);
    }
 
-   int[] testVals = {
-     1,1,1,1,
-     1,1,1,1,
-     1,1,1,1,
-     1,1,1,2
-   };
    @Test
    public void getReduction() {
-
-      SumHeapDemo sumHeap = new SumHeapDemo(Arrays.stream(testVals).boxed().collect(Collectors.toList()));
-      assert sumHeap.getReduction() == 17;
-
+      DoubleHeap doubleHeap = new DoubleHeap(testList);
+      assert doubleHeap.getReduction().equals(testListReduction);
    }
 
-   @Test
-   public void testGetReduction() {
-
+   // test util that returns the reduction (sum) of a list using Java stream API
+   private static Double getReductionSequentially(List<Double> list){
+      return list.stream().mapToDouble(Double::doubleValue).sum();
    }
 
-   @Test
-   public void getScan() {
-   }
 }
