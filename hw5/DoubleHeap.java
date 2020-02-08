@@ -1,5 +1,9 @@
 package hw5;
-
+/*
+ * Ross Hoyt
+ * CPSC 5600, Seattle University
+ * This is free and unencumbered software released into the public domain.
+ */
 import java.util.List;
 
 public class DoubleHeap extends GeneralScan<Double, Double, Double>{

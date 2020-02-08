@@ -1,8 +1,8 @@
 package hw5;
-/**
- * @file GeneralScan.java - fully recursive version of a generic parallelized reduce/scan
- * @author Ross Hoyt
- * @version 6-Feb-2020
+/*
+ * Ross Hoyt
+ * CPSC 5600, Seattle University
+ * This is free and unencumbered software released into the public domain.
  */
 import java.util.List;
 import java.util.ArrayList;
@@ -17,11 +17,12 @@ import java.util.concurrent.TimeUnit;
  * object. These methods can be overridden by subclasses to do any kind of operation for the
  * reduce/scan.
  *
- * @tparam ElemType   This is the data type of the read-only data elements.
- * @tparam TallyType  This is the combination-result data type. This type must have a 0-arg ctor.
- *                    Defaults to ElemType.
- * @tparam ResultType This is the final result data type. Any final tally will be converted to this
- *                    data type (using the gen(tally) method). Defaults to TallyType.
+ * @param <ElemType></ElemType>   This is the data type of the read-only data elements.
+ * @param <TallyType> This is the combination-result data type. This type must have a 0-arg ctor.
+ *                    Should Default to ElemType.
+ * @param <ResultType></ResultType> This is the final result data type. Any final tally will be converted to this
+ *                    data type (using the gen(tally) method).
+ *                    Should default to TallyType.
  */
 public abstract class GeneralScan<ElemType, TallyType, ResultType > {
    /**
@@ -78,7 +79,7 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
     * @return the reduction for the root node
     */
    public ResultType getReduction(){
-      return this.getReduction(ROOT);
+      return getReduction(ROOT);
    }
 
    /**
@@ -211,10 +212,11 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
       private int index;
 
       /**
-       * Constructs a RecursiveReduceAction 
+       * Constructs a RecursiveReduceAction
        * @param index starting tree index of this part of the reduce
        */
       private RecursiveReduceAction(int index) {
+         System.out.println("Creating RecursiveReduceAction for index " + index);
          this.index = index;
       }
 

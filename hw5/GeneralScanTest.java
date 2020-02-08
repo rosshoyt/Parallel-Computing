@@ -1,5 +1,9 @@
 package hw5;
-
+/*
+ * Ross Hoyt
+ * CPSC 5600, Seattle University
+ * This is free and unencumbered software released into the public domain.
+ */
 import utils.RandomArrayGenerator;
 
 import org.junit.Before;

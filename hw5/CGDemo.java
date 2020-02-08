@@ -72,6 +72,8 @@ public class CGDemo {
 
 	static private final Color COLD = new Color(0x0a, 0x37, 0x66), HOT = Color.RED;
 	static private int offset = 0;
+
+
 	private static void fillGrid(Color[][] grid) {
 		int pixels = grid.length * grid[0].length;
 		for (int r = 0; r < grid.length; r++)
