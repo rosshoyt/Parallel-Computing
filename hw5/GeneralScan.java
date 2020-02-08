@@ -6,6 +6,11 @@ package hw5;
  */
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
+import java.util.concurrent.RecursiveAction;
+import java.util.concurrent.TimeUnit;
+
 /**
  * Generalized reducing/scanning class with methods for preparing the data elements into
  * TallyType objects, combining two TallyType objects, and initializing the beginning TallyType
@@ -70,7 +75,7 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
 
    /**
     * Gets the result of the reduction at the root node.
-    * @return
+    * @return the reduction for the root node
     */
    public ResultType getReduction(){
       return this.getReduction(ROOT);
@@ -84,8 +89,6 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
       reduced = reduced || reduce(ROOT); // need to make sure reduction has already run to get the prefix tallies
       scan(ROOT, init(), output);
    }
-
-
 
    /**
     * Identity element for tally operation.
@@ -121,7 +124,6 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
     */
    protected abstract ResultType gen(TallyType tally);
 
-
    private boolean reduced;  // flag to say if we've already done the initial reduction
    private int n; // n is size of data, n-1 is size of interior
    private List<ElemType> rawData;
@@ -147,16 +149,14 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
     * @return   true
     */
    private boolean reduce(int i) {
-      if (!isLeaf(i)) {
-         if (i < n_threads - 1) {
-            //auto handle = std::async(std::launch::async, &GeneralScan::reduce, this, left(i));
-            reduce(right(i));
-            //handle.wait();
-         } else {
-            reduce(left(i));
-            reduce(right(i));
-         }
-         tallyData.set(i, combine(value(left(i)), value(right(i))));
+      ForkJoinPool forkJoinPool = new ForkJoinPool();
+      forkJoinPool.execute(new RecursiveReduceAction(i));
+      boolean status;
+      try {
+         status = forkJoinPool.awaitTermination(10, TimeUnit.SECONDS);
+         System.out.println("ForkJoinPool terminated because " + (status ? "task was completed" : "max timeout reached"));
+      }catch(InterruptedException e){
+         e.printStackTrace();
       }
       return true;
    }
@@ -201,6 +201,48 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
 
    private boolean isLeaf(int i) {
       return left(i) >= size();
+   }
+
+   /**
+    * Inner class which extends RecursiveAction and is used by the
+    * ForkJoinPool to execute the reduce() operation in parallel
+    */
+   private class RecursiveReduceAction extends RecursiveAction {
+      private int index;
+
+      /**
+       * Constructs a RecursiveReduceAction 
+       * @param index starting tree index of this part of the reduce
+       */
+      private RecursiveReduceAction(int index) {
+         this.index = index;
+      }
+
+      /**
+       * The main computation performed by this task.
+       */
+      @Override
+      protected void compute() {
+         process(index);
+      }
+
+      /**
+       * Recursive method which performs the reduce operation
+       * and creates recursive helper threads
+       * @param i subtree index
+       */
+      private void process(int i){
+         if (!isLeaf(index)) {
+            if (index < n_threads - 1) {
+               ForkJoinTask.invokeAll(new RecursiveReduceAction(left(index)));
+               process(right(index));
+            } else {
+               process(left(index));
+               process(right(index));
+            }
+            tallyData.set(index, combine(value(left(index)), value(right(index))));
+         }
+      }
    }
 };
 
