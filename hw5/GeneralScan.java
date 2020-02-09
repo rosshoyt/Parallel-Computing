@@ -4,6 +4,8 @@ package hw5;
  * CPSC 5600, Seattle University
  * This is free and unencumbered software released into the public domain.
  */
+import com.sun.org.apache.regexp.internal.RE;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.ForkJoinPool;
@@ -57,6 +59,8 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
       if (1 << height != n)
          throw new IllegalArgumentException("data size must be power of 2 for now"); // FIXME
       tallyData = new ArrayList<TallyType>(n - 1);
+
+      System.out.println("Created GeneralScan for N = " + n + " total size = " + size());
    }
 
    /**
@@ -138,7 +142,7 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
     * If the node is a leaf, it has to get converted to a tally (via prepare).
     */
    private TallyType value(int i) {
-      if (i < n - 1)
+      if (!isLeaf(i))
          return tallyData.get(i);
       else
          return prepare(rawData.get(i - (n - 1)));
@@ -150,15 +154,15 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
     * @return   true
     */
    private boolean reduce(int i) {
-      ForkJoinPool forkJoinPool = new ForkJoinPool();
-      forkJoinPool.execute(new RecursiveReduceAction(i));
+      ForkJoinPool forkJoinPool = new ForkJoinPool(n_threads);
+      forkJoinPool.invoke(new RecursiveReduceAction(i));
       boolean status;
-      try {
-         status = forkJoinPool.awaitTermination(10, TimeUnit.SECONDS);
-         System.out.println("ForkJoinPool terminated because " + (status ? "task was completed" : "max timeout reached"));
-      }catch(InterruptedException e){
-         e.printStackTrace();
-      }
+//      try {
+//         status = forkJoinPool.awaitTermination(10, TimeUnit.SECONDS);
+//         System.out.println("ForkJoinPool terminated because " + (status ? "task was completed" : "max timeout reached"));
+//      }catch(InterruptedException e){
+//         e.printStackTrace();
+//      }
       return true;
    }
 
@@ -216,7 +220,7 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
        * @param index starting tree index of this part of the reduce
        */
       private RecursiveReduceAction(int index) {
-         System.out.println("Creating RecursiveReduceAction for index " + index);
+         System.out.println("RecursiveReduceAction created for index " + index);
          this.index = index;
       }
 
@@ -234,17 +238,30 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
        * @param i subtree index
        */
       private void process(int i){
-         if (!isLeaf(index)) {
-            if (index < n_threads - 1) {
-               ForkJoinTask.invokeAll(new RecursiveReduceAction(left(index)));
-               process(right(index));
+         if (!isLeaf(i)) {
+            if (i < n_threads - 1) {
+               //List<RecursiveReduceAction> subProblems = new ArrayList<>();
+               RecursiveReduceAction subProblem = new RecursiveReduceAction(left(i));
+               //invokeAll(new RecursiveReduceAction(left(i)));
+               subProblem.fork();
+               process(right(i));
+               try {
+                  System.out.println("Waiting for left index " + left(i));
+                  subProblem.wait();
+               } catch(InterruptedException e){
+                  e.printStackTrace();
+               }
             } else {
-               process(left(index));
-               process(right(index));
+               System.out.println("Processing recursively because i > n_threads-1");
+               process(left(i));
+               process(right(i));
             }
-            tallyData.set(index, combine(value(left(index)), value(right(index))));
+            TallyType t = combine(value(left(i)), value(right(i)));
+            System.out.println("Setting tally data for index " + i + " value = " + t);
+            tallyData.set(i, t);//combine(value(left(i)), value(right(i))));
          }
+         else System.out.println("At Leaf node " + i);
       }
    }
-};
+}
 
