@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Generalized reducing/scanning class with methods for preparing the data elements into
@@ -75,7 +74,9 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
       if (i >= size())
          throw new IllegalArgumentException("non-existent node");
       reduced = reduced || reduce(ROOT); // can't do this is in ctor or virtual overrides won't work
-      return gen(value(i));
+      ResultType res = gen(value(i));
+      System.out.println("Reduction result = " + res);
+      return res; //gen(value(i));
    }
 
    /**
@@ -155,7 +156,7 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
     */
    private boolean reduce(int i) {
       ForkJoinPool forkJoinPool = new ForkJoinPool(n_threads);
-      forkJoinPool.invoke(new RecursiveReduceAction(i));
+      forkJoinPool.invoke(new RecursiveReduceAction(rawData, tallyData, i));
       boolean status;
 //      try {
 //         status = forkJoinPool.awaitTermination(10, TimeUnit.SECONDS);
@@ -212,16 +213,19 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
     * Inner class which extends RecursiveAction and is used by the
     * ForkJoinPool to execute the reduce() operation in parallel
     */
-   private class RecursiveReduceAction extends RecursiveAction {
+   class RecursiveReduceAction extends RecursiveAction {
       private int index;
-
+      List<ElemType> raw;
+      List<TallyType> tallies;
       /**
        * Constructs a RecursiveReduceAction
        * @param index starting tree index of this part of the reduce
        */
-      private RecursiveReduceAction(int index) {
-         System.out.println("RecursiveReduceAction created for index " + index);
+      RecursiveReduceAction(List<ElemType> rawData, List<TallyType> tallyData, int index) {
+         raw = rawData;
+         tallies = tallyData;
          this.index = index;
+         System.out.println("RecursiveReduceAction created for index " + index);
       }
 
       /**
@@ -241,24 +245,23 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType > {
          if (!isLeaf(i)) {
             if (i < n_threads - 1) {
                //List<RecursiveReduceAction> subProblems = new ArrayList<>();
-               RecursiveReduceAction subProblem = new RecursiveReduceAction(left(i));
-               //invokeAll(new RecursiveReduceAction(left(i)));
-               subProblem.fork();
+               RecursiveReduceAction subProblem = new RecursiveReduceAction(raw, tallies, left(i));
+               ForkJoinTask.invokeAll(subProblem);
                process(right(i));
-               try {
-                  System.out.println("Waiting for left index " + left(i));
-                  subProblem.wait();
-               } catch(InterruptedException e){
-                  e.printStackTrace();
-               }
+//               try {
+//                  System.out.println("Waiting for left index " + left(i));
+//                  subProblem.wait();
+//               } catch(InterruptedException e){
+//                  e.printStackTrace();
+//               }
             } else {
                System.out.println("Processing recursively because i > n_threads-1");
                process(left(i));
                process(right(i));
             }
             TallyType t = combine(value(left(i)), value(right(i)));
-            System.out.println("Setting tally data for index " + i + " value = " + t);
-            tallyData.set(i, t);//combine(value(left(i)), value(right(i))));
+            System.out.println("Setting tallies[" + i + "] = " + t);
+            tallies.set(i, t);//combine(value(left(i)), value(right(i))));
          }
          else System.out.println("At Leaf node " + i);
       }
