@@ -18,6 +18,7 @@ import static java.util.stream.Collectors.toList;
  */
 public class GeneralScanTest {
    private int N = 1<<6;
+   private int P = 16;
    private List<Double> testList;
    private Double testListReduction;
 
@@ -29,8 +30,10 @@ public class GeneralScanTest {
 
    @Test
    public void getReduction() {
-      DoubleHeap doubleHeap = new DoubleHeap(testList);
-      assert doubleHeap.getReduction().equals(testListReduction);
+      DoubleHeap doubleHeap = new DoubleHeap(testList, P);
+      Double result = doubleHeap.getReduction();
+      System.out.println("Double heap reduction = " +  result + ", should = " + testListReduction);
+      assert result.equals(testListReduction);
    }
 
    // test util that returns the reduction (sum) of a list using Java stream API

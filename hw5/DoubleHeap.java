@@ -11,6 +11,8 @@ public class DoubleHeap extends GeneralScan<Double, Double, Double>{
       super(raw);
    }
 
+   public DoubleHeap(List<Double> raw, int numThreads){ super(raw, numThreads); }
+
    @Override
    protected Double init() {
       return 0.0;
