@@ -4,9 +4,11 @@ package hw5;
  * CPSC 5600, Seattle University
  * This is free and unencumbered software released into the public domain.
  */
+import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 
 /**
@@ -57,14 +59,14 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
       if (1 << height != n)
          throw new IllegalArgumentException("data size must be power of 2 for now"); // FIXME
 
+      if (n_threads >= n)
+         throw new IllegalArgumentException("must be more data than threads!");
+
       forkJoinPool = new ForkJoinPool(n_threads);
 
-      int nTallies = n - 1;
+      int nTallies = n_threads * 2;
       tallyData = new ArrayList<TallyType>(nTallies);
-
       for(int i = 0; i < nTallies; i++) tallyData.add(init());
-
-      //System.out.println("Created GeneralScan for N = " + n + " total size = " + size());
    }
 
    /**
@@ -75,7 +77,7 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
     * @return     the reduction for the given node
     * @throws IllegalArgumentException if the node number is invalid
     */
-   ResultType getReduction(int i) {
+   public ResultType getReduction(int i) {
       if (i >= size())
          throw new IllegalArgumentException("non-existent node");
       reduced = reduced || reduce(ROOT); // can't do this is in ctor or virtual overrides won't work
@@ -135,6 +137,18 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
     */
    protected abstract ResultType gen(TallyType tally);
 
+
+   /**
+    * Combine and replace left with result.
+    * (Note this is slightly different than the POPP textbook
+    * which does both combine and prepare in this method.)
+    * @param accumulator the tally to combine and replace
+    * @param right       the other combine operand
+    */
+   protected TallyType accum(TallyType accumulator, TallyType right) {
+      return combine(accumulator, right);
+   }
+
    private boolean reduced;  // flag to say if we've already done the initial reduction
    private int n; // n is size of data, n-1 is size of interior
    private List<ElemType> rawData;
@@ -160,7 +174,6 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
     * @return   true
     */
    private boolean reduce(int i) {
-      ForkJoinPool forkJoinPool = new ForkJoinPool(n_threads);
       forkJoinPool.invoke(new RecursiveReduceAction(rawData, tallyData, i));
       return true;
    }
@@ -208,6 +221,17 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
       return left(i) >= size();
    }
 
+   private int leftmost(int i) {
+      while (!isLeaf(i))
+         i = left(i);
+      return i;
+   }
+
+   private int rightmost(int i) {
+      while (!isLeaf(i))
+         i = right(i);
+      return i;
+   }
    /**
     * Inner class which extends RecursiveAction and is used by the
     * ForkJoinPool to execute the reduce() operation in parallel
@@ -241,21 +265,46 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
        * @param i subtree index
        */
       private void process(int i){
-         if (!isLeaf(i)) {
-            if (i < n_threads - 1) {
-               forkJoinPool.invoke(new RecursiveReduceAction(raw, tallies, left(i)));
-               process(right(i));
-            } else {
-               System.out.println(Thread.currentThread().getName() + "Processing sequentially i > n_threads-1");
-               process(left(i));
-               process(right(i));
-            }
+         if (i < n_threads - 1) {
+            ForkJoinTask.invokeAll(new RecursiveReduceAction(raw, tallies, left(i)),
+                  new RecursiveReduceAction(raw, tallies, right(i)));
             TallyType t = combine(value(left(i)), value(right(i)));
             System.out.println(Thread.currentThread().getName() + " Setting tallies[" + i + "] = " + t);
-            tallies.set(i, t);//combine(value(left(i)), value(right(i))));
+            tallies.set(i, t);
+         } else {
+            System.out.println(Thread.currentThread().getName() + " processing sequentially i > n_threads-1");
+            TallyType tally = init();
+            int rm = rightmost(i);
+            for (int j = leftmost(i); j <= rm; j++)
+               tally = accum(tally, value(j));
+            tallyData.set(i, tally);
          }
-         else System.out.println(Thread.currentThread().getName() + " at Leaf node " + i);
+//         TallyType t = combine(value(left(i)), value(right(i)));
+//         System.out.println(Thread.currentThread().getName() + " Setting tallies[" + i + "] = " + t);
+//         tallies.set(i, t);
+         //System.out.println(Thread.currentThread().getName() + " at Leaf node " + i);
       }
+
+      /**
+       * Recursive pair-wise reduction.
+       * @param i  node number
+       * @return   true
+       */
+//      bool reduce(int i) {
+//         if (i < n_threads - 1) {
+//            auto handle = std::async(std::launch::async, &GeneralScanSchwartz::reduce, this, right(i));
+//            reduce(left(i));
+//            handle.wait();
+//            interior->at(i) = combine(value(left(i)), value(right(i)));
+//         } else {
+//            TallyType tally = init();
+//            int rm = rightmost(i);
+//            for (int j = leftmost(i); j <= rm; j++)
+//               accum(tally, value(j));
+//            interior->at(i) = tally;
+//         }
+//         return true;
+//      }
    }
 }
 

@@ -32,4 +32,16 @@ public class DoubleHeap extends GeneralScan<Double, Double, Double>{
    protected Double gen(Double tally) {
       return tally;
    }
+
+   /**
+    * Combine and replace left with result.
+    * (Note this is slightly different than the POPP textbook
+    * which does both combine and prepare in this method.)
+    * @param accumulator the tally to combine and replace
+    * @param right       the other combine operand
+    */
+   @Override
+   protected Double accum(Double accumulator, Double right) {
+      return combine(accumulator, right);
+   }
 }
