@@ -8,6 +8,7 @@ import utils.RandomArrayGenerator;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Assert;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,12 +20,14 @@ import static java.util.stream.Collectors.toList;
  * Test of GeneralScan.java using the simple concrete implementation DoubleHeap.java
  */
 public class GeneralScanTest {
-   private int N = 1<<6;
-   private int P = 16;
+   private final int N = 1<<5;
+   private final int P = 8;
+   private final double DELTA = 1e-15;
+
    private List<Double> randomList;
 
-   private Double testListReduction;
-   private List<Double> testListScan;
+   private Double sequentialReductionResult;
+   private List<Double> sequentialScanResult;
 
    // Test Heap
    DoubleHeap doubleHeap;
@@ -34,15 +37,22 @@ public class GeneralScanTest {
       randomList = DoubleStream.of(RandomArrayGenerator.getArray(N)).boxed().collect(toList());
       doubleHeap = new DoubleHeap(randomList, P);
       // initialize sequential reference results
-      testListReduction = getReductionSequentially(randomList);
-      testListScan = getScanSequentially(randomList);
+      sequentialReductionResult = getReductionSequentially(randomList);
+      sequentialScanResult = getScanSequentially(randomList);
    }
 
    @Test
    public void getReduction() {
       Double result = doubleHeap.getReduction();
-      System.out.println("Double heap reduction = " +  result + ", should = " + testListReduction);
-      assert result.equals(testListReduction);
+      System.out.println("Double heap reduction = " +  result + ", should = " + sequentialReductionResult);
+      Assert.assertEquals(result, sequentialReductionResult, DELTA);
+   }
+
+   @Test
+   public void getScan() {
+      List<Double> result = doubleHeap.getScan();
+      for(int i = 0; i < N; i++)
+         Assert.assertEquals(result.get(i), sequentialScanResult.get(i), DELTA);
    }
 
    /**
@@ -54,13 +64,11 @@ public class GeneralScanTest {
       return list.stream().mapToDouble(Double::doubleValue).sum();
    }
 
-   @Test
-   public void getScan() {
-      List<Double> result = doubleHeap.getScan();
-      System.out.println("Double heap reduction = " +  result + ", should = " + testListReduction);
-      assert result.equals(testListScan);
-   }
-
+   /**
+    * test util that returns the reduction (sum) of a list using Java stream API
+    * @param inputList
+    * @return scan data
+    */
    private static List<Double> getScanSequentially(List<Double> inputList){
       List<Double> results = new ArrayList<>(inputList.size());
       results.add(inputList.get(0));
