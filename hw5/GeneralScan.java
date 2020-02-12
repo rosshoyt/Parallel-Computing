@@ -43,6 +43,7 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
    public GeneralScan(List<ElemType> raw){
       this(raw, N_THREADS);
    }
+
    /**
     * Construct the reducer/scanner with the given input.
     * @param raw          input data
@@ -71,7 +72,6 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
       int nTallies = n_threads * 2;
       tallyData = new ArrayList<>(nTallies);
       for(int i = 0; i < nTallies; i++) tallyData.add(init());
-
 
    }
 
@@ -180,7 +180,7 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
     * @return   true
     */
    private boolean reduce(int i) {
-      forkJoinPool.invoke(new ReduceAction(rawData, tallyData, i));
+      forkJoinPool.invoke(new ReduceAction(i));
       return true;
    }
 
@@ -233,18 +233,15 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
     * ForkJoinPool to execute the reduce() operation in parallel
     */
    class ReduceAction extends RecursiveAction {
+
       private int index;
-      private List<ElemType> raw;
-      private List<TallyType> tallies;
+
       /**
        * Constructs a RecursiveReduceAction
        * @param index starting tree index of this part of the reduce
        */
-      ReduceAction(List<ElemType> rawData, List<TallyType> tallyData, int index) {
-         raw = rawData;
-         tallies = tallyData;
+      ReduceAction(int index) {
          this.index = index;
-         //System.out.println("RecursiveReduceAction created for index " + index);
       }
 
       /**
@@ -262,11 +259,11 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
        */
       private void process(int i){
          if (i < n_threads - 1) {
-            ForkJoinTask.invokeAll(new ReduceAction(raw, tallies, left(i)),
-                  new ReduceAction(raw, tallies, right(i)));
+            ForkJoinTask.invokeAll(new ReduceAction( left(i)),
+                  new ReduceAction(right(i)));
             TallyType t = combine(value(left(i)), value(right(i)));
             //System.out.println(Thread.currentThread().getName() + " Setting tallies[" + i + "] = " + t);
-            tallies.set(i, t);
+            tallyData.set(i, t);
          } else {
             //System.out.println(Thread.currentThread().getName() + " processing sequentially i > n_threads-1");
             TallyType tally = init();
