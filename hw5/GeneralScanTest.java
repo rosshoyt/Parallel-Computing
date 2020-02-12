@@ -22,7 +22,7 @@ import static java.util.stream.Collectors.toList;
 public class GeneralScanTest {
    private final int N = 1<<5;
    private final int P = 8;
-   private final double DELTA = 1e-15;
+   private final double DELTA = 1e-10;
 
    private List<Double> randomList;
 
@@ -30,7 +30,7 @@ public class GeneralScanTest {
    private List<Double> sequentialScanResult;
 
    // Test Heap
-   DoubleHeap doubleHeap;
+   private DoubleHeap doubleHeap;
 
    @Before
    public void setUp() throws Exception {
@@ -44,7 +44,6 @@ public class GeneralScanTest {
    @Test
    public void getReduction() {
       Double result = doubleHeap.getReduction();
-      System.out.println("Double heap reduction = " +  result + ", should = " + sequentialReductionResult);
       Assert.assertEquals(result, sequentialReductionResult, DELTA);
    }
 

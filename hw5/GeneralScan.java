@@ -244,7 +244,7 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
          raw = rawData;
          tallies = tallyData;
          this.index = index;
-         System.out.println("RecursiveReduceAction created for index " + index);
+         //System.out.println("RecursiveReduceAction created for index " + index);
       }
 
       /**
@@ -265,10 +265,10 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
             ForkJoinTask.invokeAll(new ReduceAction(raw, tallies, left(i)),
                   new ReduceAction(raw, tallies, right(i)));
             TallyType t = combine(value(left(i)), value(right(i)));
-            System.out.println(Thread.currentThread().getName() + " Setting tallies[" + i + "] = " + t);
+            //System.out.println(Thread.currentThread().getName() + " Setting tallies[" + i + "] = " + t);
             tallies.set(i, t);
          } else {
-            System.out.println(Thread.currentThread().getName() + " processing sequentially i > n_threads-1");
+            //System.out.println(Thread.currentThread().getName() + " processing sequentially i > n_threads-1");
             TallyType tally = init();
             int rm = rightmost(i);
             for (int j = leftmost(i); j <= rm; j++)
@@ -281,9 +281,6 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
 
       private int index;
       private TallyType tallyPrior;
-      private List<ElemType> raw;
-      private List<TallyType> tallies;
-      private List<ResultType> scanData;
 
       /**
        * Constructs a RecursiveReduceAction
@@ -302,17 +299,22 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
          process(index, tallyPrior);
       }
 
+      /**
+       * Recursive method for Scan
+       * @param i
+       * @param tallyPrior
+       */
       private void process(int i, TallyType tallyPrior) {
          if (i < n_threads - 1) {
+            //System.out.println(Thread.currentThread().getName() + " forking");//tallies[" + i + "] = " + t);
             ForkJoinTask.invokeAll(new ScanAction(left(i), tallyPrior), new ScanAction(right(i), combine(tallyPrior, value(left(i)))));
-            //auto handle = std::async(std::launch::async, &GeneralScanSchwartz::scan, this, left(i), tallyPrior, output);
-            //scan(right(i), combine(tallyPrior, value(left(i))), output);
-            //handle.wait();
          } else {
             TallyType tally = tallyPrior;
             int rm = rightmost(i);
             for (int j = leftmost(i); j <= rm; j++) {
                tally = accum(tally, value(j));
+               //int printi = j - (n - 1); // for debug printout
+               //System.out.println(Thread.currentThread().getName() + " setting [" + printi + "] = " + tally);
                scanData.set(j - (n - 1), gen(tally));
             }
          }
