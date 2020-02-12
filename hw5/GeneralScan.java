@@ -4,7 +4,6 @@ package hw5;
  * CPSC 5600, Seattle University
  * This is free and unencumbered software released into the public domain.
  */
-import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.ForkJoinPool;
@@ -64,9 +63,16 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
 
       forkJoinPool = new ForkJoinPool(n_threads);
 
+      // initialize scan data array
+      scanData = new ArrayList<>(n);
+      for(int i = 0; i < n; i++) scanData.add(null);
+
+      // initialize tally data array
       int nTallies = n_threads * 2;
-      tallyData = new ArrayList<TallyType>(nTallies);
+      tallyData = new ArrayList<>(nTallies);
       for(int i = 0; i < nTallies; i++) tallyData.add(init());
+
+
    }
 
    /**
@@ -81,9 +87,9 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
       if (i >= size())
          throw new IllegalArgumentException("non-existent node");
       reduced = reduced || reduce(ROOT); // can't do this is in ctor or virtual overrides won't work
-      ResultType res = gen(value(i));
-      System.out.println("Reduction result = " + res);
-      return res; //gen(value(i));
+      //ResultType res = gen(value(i));
+      //System.out.println("Reduction result = " + res);
+      return gen(value(i));
    }
 
    /**
@@ -96,11 +102,10 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
 
    /**
     * Get all the scan (inclusive) results for all the input data.
-    * @param output  scan results (vector is indexed corresponding to input elements)
     */
-   public void getScan(List<ResultType> output) {
+   public List<ResultType> getScan() {
       reduced = reduced || reduce(ROOT); // need to make sure reduction has already run to get the prefix tallies
-      scan(ROOT, init(), output);
+      return scan(ROOT, init());
    }
 
    /**
@@ -153,6 +158,7 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
    private int n; // n is size of data, n-1 is size of interior
    private List<ElemType> rawData;
    private List<TallyType> tallyData;
+   private List<ResultType> scanData;
    private int height;
    private int n_threads;
 
@@ -174,30 +180,20 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
     * @return   true
     */
    private boolean reduce(int i) {
-      forkJoinPool.invoke(new RecursiveReduceAction(rawData, tallyData, i));
+      forkJoinPool.invoke(new ReduceAction(rawData, tallyData, i));
       return true;
    }
 
    /**
     * Recursive binary-tree prefix scan (inclusive).
-    * TODO Implement
+    *
     * @param i           node number
     * @param tallyPrior  tally of all the elements to the left of this node
-    * @param output      where to write the output results
+    * @return
     */
-   private void scan(int i, TallyType tallyPrior, List<ResultType> output) {
-      if (isLeaf(i)) {
-         output.set(i - (n - 1), gen(combine(tallyPrior, value(i))));
-      } else {
-         if (i < n_threads - 1) {
-            //auto handle = std::async(std::launch::async, &GeneralScan::scan, this, left(i), tallyPrior, output);
-            scan(right(i), combine(tallyPrior, value(left(i))), output);
-            //handle.wait();
-         } else {
-            scan(left(i), tallyPrior, output);
-            scan(right(i), combine(tallyPrior, value(left(i))), output);
-         }
-      }
+   private List<ResultType> scan(int i, TallyType tallyPrior) {
+      forkJoinPool.invoke(new ScanAction(i, tallyPrior));
+      return scanData;
    }
 
    // Following are for maneuvering around the binary tree
@@ -236,7 +232,7 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
     * Inner class which extends RecursiveAction and is used by the
     * ForkJoinPool to execute the reduce() operation in parallel
     */
-   class RecursiveReduceAction extends RecursiveAction {
+   class ReduceAction extends RecursiveAction {
       private int index;
       private List<ElemType> raw;
       private List<TallyType> tallies;
@@ -244,7 +240,7 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
        * Constructs a RecursiveReduceAction
        * @param index starting tree index of this part of the reduce
        */
-      RecursiveReduceAction(List<ElemType> rawData, List<TallyType> tallyData, int index) {
+      ReduceAction(List<ElemType> rawData, List<TallyType> tallyData, int index) {
          raw = rawData;
          tallies = tallyData;
          this.index = index;
@@ -266,8 +262,8 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
        */
       private void process(int i){
          if (i < n_threads - 1) {
-            ForkJoinTask.invokeAll(new RecursiveReduceAction(raw, tallies, left(i)),
-                  new RecursiveReduceAction(raw, tallies, right(i)));
+            ForkJoinTask.invokeAll(new ReduceAction(raw, tallies, left(i)),
+                  new ReduceAction(raw, tallies, right(i)));
             TallyType t = combine(value(left(i)), value(right(i)));
             System.out.println(Thread.currentThread().getName() + " Setting tallies[" + i + "] = " + t);
             tallies.set(i, t);
@@ -279,32 +275,49 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
                tally = accum(tally, value(j));
             tallyData.set(i, tally);
          }
-//         TallyType t = combine(value(left(i)), value(right(i)));
-//         System.out.println(Thread.currentThread().getName() + " Setting tallies[" + i + "] = " + t);
-//         tallies.set(i, t);
-         //System.out.println(Thread.currentThread().getName() + " at Leaf node " + i);
+      }
+   }
+   class ScanAction extends RecursiveAction {
+
+      private int index;
+      private TallyType tallyPrior;
+      private List<ElemType> raw;
+      private List<TallyType> tallies;
+      private List<ResultType> scanData;
+
+      /**
+       * Constructs a RecursiveReduceAction
+       * @param index starting tree index of this part of the reduce
+       */
+      public ScanAction(int index, TallyType tallyPrior) {
+         this.index = index;
+         this.tallyPrior = tallyPrior;
       }
 
       /**
-       * Recursive pair-wise reduction.
-       * @param i  node number
-       * @return   true
+       * The main computation performed by this task.
        */
-//      bool reduce(int i) {
-//         if (i < n_threads - 1) {
-//            auto handle = std::async(std::launch::async, &GeneralScanSchwartz::reduce, this, right(i));
-//            reduce(left(i));
-//            handle.wait();
-//            interior->at(i) = combine(value(left(i)), value(right(i)));
-//         } else {
-//            TallyType tally = init();
-//            int rm = rightmost(i);
-//            for (int j = leftmost(i); j <= rm; j++)
-//               accum(tally, value(j));
-//            interior->at(i) = tally;
-//         }
-//         return true;
-//      }
+      @Override
+      protected void compute() {
+         process(index, tallyPrior);
+      }
+
+      private void process(int i, TallyType tallyPrior) {
+         if (i < n_threads - 1) {
+            ForkJoinTask.invokeAll(new ScanAction(left(i), tallyPrior), new ScanAction(right(i), combine(tallyPrior, value(left(i)))));
+            //auto handle = std::async(std::launch::async, &GeneralScanSchwartz::scan, this, left(i), tallyPrior, output);
+            //scan(right(i), combine(tallyPrior, value(left(i))), output);
+            //handle.wait();
+         } else {
+            TallyType tally = tallyPrior;
+            int rm = rightmost(i);
+            for (int j = leftmost(i); j <= rm; j++) {
+               tally = accum(tally, value(j));
+               scanData.set(j - (n - 1), gen(tally));
+            }
+         }
+      }
    }
+
 }
 
