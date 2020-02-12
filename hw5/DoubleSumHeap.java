@@ -6,12 +6,12 @@ package hw5;
  */
 import java.util.List;
 
-public class DoubleHeap extends GeneralScan<Double, Double, Double>{
-   public DoubleHeap(List<Double> raw) {
+public class DoubleSumHeap extends GeneralScan<Double, Double, Double>{
+   public DoubleSumHeap(List<Double> raw) {
       super(raw);
    }
 
-   public DoubleHeap(List<Double> raw, int numThreads){ super(raw, numThreads); }
+   public DoubleSumHeap(List<Double> raw, int numThreads){ super(raw, numThreads); }
 
    @Override
    protected Double init() {

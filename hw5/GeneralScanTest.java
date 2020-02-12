@@ -20,6 +20,7 @@ import static java.util.stream.Collectors.toList;
  * Test of GeneralScan.java using the simple concrete implementation DoubleHeap.java
  */
 public class GeneralScanTest {
+
    private final int N = 1<<5;
    private final int P = 8;
    private final double DELTA = 1e-10;
@@ -30,12 +31,12 @@ public class GeneralScanTest {
    private List<Double> sequentialScanResult;
 
    // Test Heap
-   private DoubleHeap doubleHeap;
+   private DoubleSumHeap doubleHeap;
 
    @Before
    public void setUp() throws Exception {
       randomList = DoubleStream.of(RandomArrayGenerator.getArray(N)).boxed().collect(toList());
-      doubleHeap = new DoubleHeap(randomList, P);
+      doubleHeap = new DoubleSumHeap(randomList, P);
       // initialize sequential reference results
       sequentialReductionResult = getReductionSequentially(randomList);
       sequentialScanResult = getScanSequentially(randomList);
