@@ -4,40 +4,41 @@ package hw5;
  * CPSC 5600, Seattle University
  * This is free and unencumbered software released into the public domain.
  */
+import org.junit.*;
+import org.junit.runners.MethodSorters;
 import utils.RandomArrayGenerator;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.Assert;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.DoubleStream;
-
 import static java.util.stream.Collectors.toList;
 
 /**
  * Test of GeneralScan.java using the simple concrete implementation DoubleHeap.java
  */
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class GeneralScanTest {
+   // size of test
+   private static final int N = 1<<22;
+   // num threads
+   private static final int P = 16;
+   // required Double precision during Assert.equals() comparisons
+   private final double DELTA = 1e-4;
 
-   private final int N = 1<<5;
-   private final int P = 8;
-   private final double DELTA = 1e-10;
+   // the list of random values to use
+   private static List<Double> randomList;
 
-   private List<Double> randomList;
+   // the reference results to be calculated
+   private static Double sequentialReductionResult;
+   private static List<Double> sequentialScanResult;
 
-   private Double sequentialReductionResult;
-   private List<Double> sequentialScanResult;
+   // Simple, concrete implementation of Heap
+   private static DoubleSumHeap doubleHeap;
 
-   // Test Heap
-   private DoubleSumHeap doubleHeap;
-
-   @Before
-   public void setUp() throws Exception {
+   @BeforeClass
+   public static void setUp() throws Exception {
       randomList = DoubleStream.of(RandomArrayGenerator.getArray(N)).boxed().collect(toList());
       doubleHeap = new DoubleSumHeap(randomList, P);
-      // initialize sequential reference results
+      // calculate reference results sequentially
       sequentialReductionResult = getReductionSequentially(randomList);
       sequentialScanResult = getScanSequentially(randomList);
    }
@@ -76,5 +77,4 @@ public class GeneralScanTest {
          results.add(inputList.get(i) + results.get(i - 1));
       return results;
    }
-
 }
