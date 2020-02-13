@@ -35,7 +35,12 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
     */
    public static int N_THREADS = 16;  // fork a thread for top levels
 
+
+   /**
+    * ForkJoinPool used by the reduce and scan operations
+    */
    private ForkJoinPool forkJoinPool;
+
    /**
     * Construct the reducer/scanner with the given input. Sets n_threads to default.
     * @param raw input data
@@ -46,32 +51,29 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
 
    /**
     * Construct the reducer/scanner with the given input.
-    * @param raw          input data
+    * @param rawData      input data
     * @param n_threads    number of threads to use for parallelization, defaults to N_THREADS
     */
-   public GeneralScan(List<ElemType> raw, int n_threads){
-      reduced= false;
-      n = raw.size();
-      rawData = raw;
-      height = (int)Math.ceil(Math.log(n)/Math.log(2));
+   public GeneralScan(List<ElemType> rawData, int n_threads){
+      this.reduced = false;
+      this.rawData = rawData;
+      this.n = rawData.size();
+      this.height = (int)Math.ceil(Math.log(n)/Math.log(2));
       this.n_threads = n_threads;
-
+      // validate input data
       if (1 << height != n)
          throw new IllegalArgumentException("data size must be power of 2 for now"); // FIXME
-
       if (n_threads >= n)
          throw new IllegalArgumentException("must be more data than threads!");
-
+      // initialize shared ForkJoinPool
       forkJoinPool = new ForkJoinPool(n_threads);
-
       // initialize scan data array
       scanData = new ArrayList<>(n);
       for(int i = 0; i < n; i++) scanData.add(null);
-
       // initialize tally data array
-      int nTallies = n_threads * 2;
-      tallyData = new ArrayList<>(nTallies);
-      for(int i = 0; i < nTallies; i++) tallyData.add(init());
+      int n_tallies = n_threads * 2;
+      tallyData = new ArrayList<>(n_tallies);
+      for(int i = 0; i < n_tallies; i++) tallyData.add(init());
 
    }
 
@@ -87,8 +89,6 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
       if (i >= size())
          throw new IllegalArgumentException("non-existent node");
       reduced = reduced || reduce(ROOT); // can't do this is in ctor or virtual overrides won't work
-      //ResultType res = gen(value(i));
-      //System.out.println("Reduction result = " + res);
       return gen(value(i));
    }
 
@@ -142,7 +142,6 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
     */
    protected abstract ResultType gen(TallyType tally);
 
-
    /**
     * Combine and replace left with result.
     * (Note this is slightly different than the POPP textbook
@@ -154,13 +153,41 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
       return combine(accumulator, right);
    }
 
-   private boolean reduced;  // flag to say if we've already done the initial reduction
-   private int n; // n is size of data, n-1 is size of interior
-   private List<ElemType> rawData;
-   private List<TallyType> tallyData;
-   private List<ResultType> scanData;
+   /**
+    * Flag to say if we've already done the initial reduction
+    */
+   private boolean reduced;
+
+   /**
+    *  The size of the rawData array.
+    *  n-1 is size of interior...
+    */
+   private int n;
+
+   /**
+    * The height of the heap
+    */
    private int height;
+
+   /**
+    * The number of threads to use in the fork join pool
+    */
    private int n_threads;
+
+   /**
+    * The raw data array to perform the Scan on
+    */
+   private List<ElemType> rawData;
+
+   /**
+    * The list of tally data
+    */
+   private List<TallyType> tallyData;
+
+   /**
+    * The scan data
+    */
+   private List<ResultType> scanData;
 
    /**
     * Get the value for a node in the tree.
@@ -196,41 +223,84 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
       return scanData;
    }
 
-   // Following are for maneuvering around the binary tree
+   /**
+    * Method that calculates the total size of Heap, including interior and leaf nodes
+    *
+    * @return total number of heap nodes
+    */
    private int size() {
       return (n - 1) + n;
    }
 
+   /**
+    * Method that calculates and returns the index of the provided index's parent node.
+    *
+    * @param i heap index to calculate the parent index of
+    * @return  index of parent node
+    */
    private int parent(int i) {
       return (i - 1) / 2;
    }
 
+   /**
+    * Method that calculates and returns the global index of the left child node of the
+    * provided global tree index
+    *
+    * @param i  heap index to calculate the left child index of
+    * @return   left child index
+    */
    private int left(int i) {
       return i * 2 + 1;
    }
 
+   /**
+    * Method that calculates and returns the global index of the right child node of the
+    * provided global tree index
+    *
+    * @param i  heap index to calculate the right child index of
+    * @return   left child index
+    */
    private int right(int i) {
       return left(i) + 1;
    }
 
+   /**
+    * Method that checks if a given heap index is a leaf
+    *
+    * @param i index to check
+    * @return true if index is leaf index
+    */
    private boolean isLeaf(int i) {
       return left(i) >= size();
    }
 
+   /**
+    * Method that returns the left-most heap index of a provided index
+    *
+    * @param i  index to check
+    * @return   the leftmost heap index
+    */
    private int leftmost(int i) {
       while (!isLeaf(i))
          i = left(i);
       return i;
    }
 
+   /**
+    * Method that returns the right-most heap index of a provided index
+    *
+    * @param i  index to check
+    * @return   the right-most heap index
+    */
    private int rightmost(int i) {
       while (!isLeaf(i))
          i = right(i);
       return i;
    }
+
    /**
     * Inner class which extends RecursiveAction and is used by the
-    * ForkJoinPool to execute the reduce() operation in parallel
+    * ForkJoinPool to execute the reduce operation in parallel
     */
    class ReduceAction extends RecursiveAction {
 
@@ -259,13 +329,10 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
        */
       private void process(int i){
          if (i < n_threads - 1) {
-            ForkJoinTask.invokeAll(new ReduceAction( left(i)),
-                  new ReduceAction(right(i)));
-            TallyType t = combine(value(left(i)), value(right(i)));
-            //System.out.println(Thread.currentThread().getName() + " Setting tallies[" + i + "] = " + t);
-            tallyData.set(i, t);
+            ForkJoinTask.invokeAll(new ReduceAction(left(i)),
+                                   new ReduceAction(right(i)));
+            tallyData.set(i, combine(value(left(i)), value(right(i))));
          } else {
-            //System.out.println(Thread.currentThread().getName() + " processing sequentially i > n_threads-1");
             TallyType tally = init();
             int rm = rightmost(i);
             for (int j = leftmost(i); j <= rm; j++)
@@ -274,6 +341,11 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
          }
       }
    }
+
+   /**
+    * Inner class that extends RecursiveAction and is used by the
+    * ForkJoinPool to execute the scan operation in parallel
+    */
    class ScanAction extends RecursiveAction {
 
       private int index;
@@ -303,20 +375,17 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
        */
       private void process(int i, TallyType tallyPrior) {
          if (i < n_threads - 1) {
-            //System.out.println(Thread.currentThread().getName() + " forking");//tallies[" + i + "] = " + t);
-            ForkJoinTask.invokeAll(new ScanAction(left(i), tallyPrior), new ScanAction(right(i), combine(tallyPrior, value(left(i)))));
+            ForkJoinTask.invokeAll(new ScanAction(left(i), tallyPrior),
+                  new ScanAction(right(i), combine(tallyPrior, value(left(i)))));
          } else {
             TallyType tally = tallyPrior;
             int rm = rightmost(i);
             for (int j = leftmost(i); j <= rm; j++) {
                tally = accum(tally, value(j));
-               //int printi = j - (n - 1); // for debug printout
-               //System.out.println(Thread.currentThread().getName() + " setting [" + printi + "] = " + tally);
                scanData.set(j - (n - 1), gen(tally));
             }
          }
       }
    }
-
 }
 
