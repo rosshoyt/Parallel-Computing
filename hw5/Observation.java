@@ -6,6 +6,8 @@ package hw5;
  */
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -74,6 +76,28 @@ public class Observation implements Serializable {
             e.printStackTrace();
             System.exit(1);
         }
+    }
+
+    public static List<Observation> readObservationFile(String fileName) {
+        List<Observation> observations = new ArrayList<>();
+        try {
+            ObjectInputStream in = new ObjectInputStream(new FileInputStream(fileName));
+            int count = 0;
+            Observation obs = (Observation) in.readObject();
+            System.out.println("Reading " + fileName);
+            while (!obs.isEOF()) {
+                observations.add(obs);
+                System.out.println(++count + ": " + obs);
+                obs = (Observation) in.readObject();
+            }
+            in.close();
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("reading from " + fileName + "failed: " + e);
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        return observations;
     }
 
 }

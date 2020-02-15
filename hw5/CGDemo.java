@@ -1,16 +1,21 @@
 package hw5;
 /*
- * Kevin Lundeen
+ * Ross Hoyt/Kevin Lundeen
  * CPSC 5600, Seattle University
  * This is free and unencumbered software released into the public domain.
  */
 
+import com.sun.xml.internal.bind.v2.TODO;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.FileNotFoundException;
-
 import javax.swing.JButton;
 import javax.swing.JFrame;
 
@@ -24,7 +29,23 @@ public class CGDemo {
 	private static JButton button;
 	private static Color[][] grid;
 
+	// Values for generating the Observations file
+	private static int N_OBSERVATIONS = 50;
+	private static int N_TIME_SLICES = 20;
+	private static final String FILE_NAME = "observation_test.dat";
+
+
+
 	public static void main(String[] args) throws FileNotFoundException, InterruptedException {
+
+		// set observation data from existing file, or generate a new one if none exists...
+		if(Files.notExists(Paths.get(FILE_NAME)))
+			Observation.generateObservationFile(N_OBSERVATIONS, N_TIME_SLICES, FILE_NAME);
+		List<Observation> observations = Observation.readObservationFile(FILE_NAME);
+		/*
+		TODO implement general scan of the observations, and use the results to fill each display frame of heatmap
+		*/
+
 		grid = new Color[DIM][DIM];
 		application = new JFrame();
 		application.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -42,7 +63,9 @@ public class CGDemo {
 		application.repaint();
 		animate();
 	}
-	
+
+
+
 	private static void animate() throws InterruptedException {
 		button.setEnabled(false);
  		for (int i = 0; i < DIM; i++) { 
@@ -57,15 +80,13 @@ public class CGDemo {
 	static class BHandler implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
 			if (REPLAY.equals(e.getActionCommand())) {
-				new Thread() {
-			        public void run() {
-			            try {
-								animate();
-							} catch (InterruptedException e) {
-								System.exit(0);
-							}
-			        }
-			    }.start();
+				new Thread(() -> {
+					 try {
+						 animate();
+					 } catch (InterruptedException e1) {
+						 System.exit(0);
+					 }
+				}).start();
 			}
 		}
 	};
