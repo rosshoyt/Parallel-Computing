@@ -60,21 +60,24 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
       this.n = rawData.size();
       this.height = (int)Math.ceil(Math.log(n)/Math.log(2));
       this.n_threads = n_threads;
+
       // validate input data
       if (1 << height != n)
          throw new IllegalArgumentException("data size must be power of 2 for now"); // FIXME
       if (n_threads >= n)
          throw new IllegalArgumentException("must be more data than threads!");
+
       // initialize shared ForkJoinPool
       forkJoinPool = new ForkJoinPool(n_threads);
+
       // initialize scan data array
       scanData = new ArrayList<>(n);
       for(int i = 0; i < n; i++) scanData.add(null);
+
       // initialize tally data array
       int n_tallies = n_threads * 2;
       tallyData = new ArrayList<>(n_tallies);
       for(int i = 0; i < n_tallies; i++) tallyData.add(init());
-
    }
 
    /**
@@ -159,8 +162,7 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
    private boolean reduced;
 
    /**
-    *  The size of the rawData array.
-    *  n-1 is size of interior...
+    *  The number of ElemType in rawData array
     */
    private int n;
 
@@ -297,6 +299,12 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
          i = right(i);
       return i;
    }
+
+   /**
+    * Gets N for this heap (the length of the underlying raw data list)
+    * @return num elements in raw data list (N)
+    */
+   protected int getRawDataSize(){ return rawData.size(); }
 
    /**
     * Inner class which extends RecursiveAction and is used by the
