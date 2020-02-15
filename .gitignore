@@ -1,5 +1,6 @@
 # assignment content
 materials/
+*.dat
 
 # compilation
 build/
