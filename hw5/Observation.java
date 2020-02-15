@@ -1,11 +1,12 @@
 package hw5;
 /*
- * Kevin Lundeen
+ * Ross Hoyt/Kevin Lundeen
  * CPSC 5600, Seattle University
  * This is free and unencumbered software released into the public domain.
  */
 
 import java.io.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Represents an observation from our detection device. When a location on the
@@ -13,8 +14,15 @@ import java.io.*;
  * in one of these Observation objects.
  */
 public class Observation implements Serializable {
+
+
     private static final long serialVersionUID = 1L;
     public static final long EOF = Long.MAX_VALUE;  // our convention to mark EOF with a special object
+
+    // @see https://learnopengl.com/Getting-started/Coordinate-Systems
+    public static final double CLIPPING_SPACE_MAX = 1.0;
+    public static final double CLIPPING_SPACE_MIN = -1.0;
+
 
     public long time; // number of milliseconds since turning on the detector device
     public double x, y; // location of the detected event on the detection grid
@@ -34,49 +42,35 @@ public class Observation implements Serializable {
         return time == EOF;
     }
 
+    @Override
     public String toString() {
         return "Observation(" + time + ", " + x + ", " + y + ")";
     }
 
     /**
-     * Example with serialization of a series of Observation to a local file.
      *
-     * @param args not used
+     * @param numObservations number of serialized Observations to put in generated file
+     * @param numTimeSlices   upper bound (exclusive) for the random time slice each Observation is assigned
+     * @param fileName        name of the file in the local directory to store the observations
      */
-    public static void main(String[] args) {
-        final String FILENAME = "observation_test.dat";
-
-		/*
-		Write some arbitrary observations to a observation data file.
-		 */
+    public static void generateObservationFile(int numObservations, long numTimeSlices, String fileName){
         try {
-            ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(FILENAME));
-            for (long t = 0; t < 6; t++)
-                for (double x = -0.41; x < 1.0; x += 0.194)
-                    for (double y = 0.37; y > -0.9; y -= 0.423)
-                        out.writeObject(new Observation(t, x, y));
+            ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(fileName));
+            /*
+            Generate requested number of Observations with random time slices between 0 to numTimeslices - 1,
+            and with random X/Y coordinates being double values on the -1.0 to 1.0 clipping plane
+            */
+            for(int i = 0; i < numObservations; i++)
+                out.writeObject(new Observation(
+                      ThreadLocalRandom.current().nextLong(0, numTimeSlices),
+                      ThreadLocalRandom.current().nextDouble(CLIPPING_SPACE_MIN, CLIPPING_SPACE_MAX),
+                      ThreadLocalRandom.current().nextDouble(CLIPPING_SPACE_MIN, CLIPPING_SPACE_MAX)
+                ));
+
             out.writeObject(new Observation());  // to mark EOF
             out.close();
         } catch (IOException e) {
-            System.out.println("writing to " + FILENAME + "failed: " + e);
-            e.printStackTrace();
-            System.exit(1);
-        }
-
-		/*
-		Now read them from the data file and display them on the console.
-		 */
-        try {
-            ObjectInputStream in = new ObjectInputStream(new FileInputStream(FILENAME));
-            int count = 0;
-            Observation obs = (Observation) in.readObject();
-            while (!obs.isEOF()) {
-                System.out.println(++count + ": " + obs);
-                obs = (Observation) in.readObject();
-            }
-            in.close();
-        } catch (IOException | ClassNotFoundException e) {
-            System.out.println("reading from " + FILENAME + "failed: " + e);
+            System.out.println("writing to " + fileName + "failed: " + e);
             e.printStackTrace();
             System.exit(1);
         }
