@@ -5,12 +5,9 @@ package hw5;
  * This is free and unencumbered software released into the public domain.
  */
 
-import com.sun.xml.internal.bind.v2.TODO;
-
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -30,17 +27,18 @@ public class CGDemo {
 	private static Color[][] grid;
 
 	// Values for generating the Observations file
-	private static int N_OBSERVATIONS = 50;
+	private static int N_OBSERVATIONS = 16; // Must be both a power of 2, and a square number, for now (4, 16, 64, 256, 1024)
 	private static int N_TIME_SLICES = 20;
 	private static final String FILE_NAME = "observation_test.dat";
 
-
+	static boolean testing = true; // TODO delete this temp flag which regenerates the observation file each run
 
 	public static void main(String[] args) throws FileNotFoundException, InterruptedException {
 
 		// set observation data from existing file, or generate a new one if none exists...
-		if(Files.notExists(Paths.get(FILE_NAME)))
-			Observation.generateObservationFile(N_OBSERVATIONS, N_TIME_SLICES, FILE_NAME);
+		if(Files.notExists(Paths.get(FILE_NAME)) || testing) // TODO remove boolean 'testing'
+			Observation.generateObservationFile(FILE_NAME, Observation.SeriesType.SWEEP_SQUARE_GRID,
+					N_OBSERVATIONS, N_TIME_SLICES);
 		List<Observation> observations = Observation.readObservationFile(FILE_NAME);
 		/*
 		TODO implement general scan of the observations, and use the results to fill each display frame of heatmap
