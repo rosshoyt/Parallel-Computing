@@ -301,12 +301,6 @@ public abstract class GeneralScan<ElemType, TallyType, ResultType> {
    }
 
    /**
-    * Gets N for this heap (the length of the underlying raw data list)
-    * @return num elements in raw data list (N)
-    */
-   protected int getRawDataSize(){ return rawData.size(); }
-
-   /**
     * Inner class which extends RecursiveAction and is used by the
     * ForkJoinPool to execute the reduce operation in parallel
     */

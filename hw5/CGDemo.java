@@ -27,11 +27,13 @@ public class CGDemo {
 	private static Color[][] grid;
 
 	// Values for generating the Observations file
-	private static int N_OBSERVATIONS = 16; // Must be both a power of 2, and a square number, for now (4, 16, 64, 256, 1024)
+	private static int N_OBSERVATIONS = 1024; // Must be both a power of 2, and a square number, for now (4, 16, 64, 256, 1024)
 	private static int N_TIME_SLICES = 20;
 	private static final String FILE_NAME = "observation_test.dat";
 
 	static boolean testing = true; // TODO delete this temp flag which regenerates the observation file each run
+	public static int N_THREADS = 16;
+
 
 	public static void main(String[] args) throws FileNotFoundException, InterruptedException {
 
@@ -43,6 +45,9 @@ public class CGDemo {
 		/*
 		TODO implement general scan of the observations, and use the results to fill each display frame of heatmap
 		*/
+		HeatmapScan heatMap = new HeatmapScan(observations, N_THREADS, DIM, DIM);
+		List<HeatmapFrame> frames = heatMap.getScan();
+
 
 		grid = new Color[DIM][DIM];
 		application = new JFrame();

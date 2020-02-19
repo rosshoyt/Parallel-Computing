@@ -21,11 +21,6 @@ public class Observation implements Serializable {
     private static final long serialVersionUID = 1L;
     public static final long EOF = Long.MAX_VALUE;  // our convention to mark EOF with a special object
 
-    // Static formatting constants
-    public static final double CLIPPING_SPACE_MAX = 1.0;
-    public static final double CLIPPING_SPACE_MIN = -1.0;
-    public static final double CLIPPING_SPACE_SIZE = 2.0;
-
     // types of series that can be written to the file
     public enum SeriesType { FULLY_RANDOM, SWEEP_SQUARE_GRID , /*TODO*/ SWEEP_RECT_GRID;}
 
@@ -83,14 +78,14 @@ public class Observation implements Serializable {
             switch(seriesType) {
                 case FULLY_RANDOM:
                     /*
-                    Generate set of Observations with random time slices between 0 to numTimeslices - 1,
+                    Generate set of Observations with random time slices between 0 (inclusive) to numTimeslices (exclusive),
                     and with random X/Y coordinates being double values on the -1.0 to 1.0 clipping plane
                     */
                     for(int i = 0; i < numObservations; i++)
                         out.writeObject(new Observation(
                               ThreadLocalRandom.current().nextInt(0, numTimeSlices),
-                              ThreadLocalRandom.current().nextDouble(CLIPPING_SPACE_MIN, CLIPPING_SPACE_MAX),
-                              ThreadLocalRandom.current().nextDouble(CLIPPING_SPACE_MIN, CLIPPING_SPACE_MAX)
+                              ThreadLocalRandom.current().nextDouble(HeatmapFrame.CLIPPING_SPACE_MIN, HeatmapFrame.CLIPPING_SPACE_MAX),
+                              ThreadLocalRandom.current().nextDouble(HeatmapFrame.CLIPPING_SPACE_MIN, HeatmapFrame.CLIPPING_SPACE_MAX)
                         ));
                     break;
                 case SWEEP_SQUARE_GRID:
@@ -100,14 +95,14 @@ public class Observation implements Serializable {
                     ensure even distribution
                     */
                     int gridDim = (int)Math.sqrt(numObservations);
-                    double sectionSize = CLIPPING_SPACE_SIZE / gridDim; // how much of clipping plane is delegated for current observation
+                    double sectionSize = HeatmapFrame.CLIPPING_SPACE_SIZE / gridDim; // how much of clipping plane is delegated for current observation
                     double pointOffset = sectionSize / 2; // so that each point falls in the middle of its section
                     for (int col = 0, timeCount = 0; col < gridDim; col++)
                         for(int row = 0; row < gridDim; row++, timeCount++)
                             out.writeObject(new Observation(
                                   timeCount,
-                                  row * sectionSize + pointOffset + CLIPPING_SPACE_MIN,
-                                  col * sectionSize + pointOffset + CLIPPING_SPACE_MIN
+                                  row * sectionSize + pointOffset + HeatmapFrame.CLIPPING_SPACE_MIN,
+                                  col * sectionSize + pointOffset + HeatmapFrame.CLIPPING_SPACE_MIN
                             ));
                     break;
 
