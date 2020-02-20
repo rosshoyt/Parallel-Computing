@@ -43,7 +43,7 @@ public class CGDemo {
 
 		// set observation data from existing file, or generate a new one if none exists...
 		if(Files.notExists(Paths.get(FILE_NAME)) || testing) // TODO remove boolean 'testing'
-			Observation.generateObservationFile(FILE_NAME, Observation.SeriesType.SWEEP_SQUARE_GRID,
+			Observation.generateObservationFile(FILE_NAME, Observation.SeriesType.FULLY_RANDOM,
 					N_OBSERVATIONS, N_TIME_SLICES);
 		List<Observation> observations = Observation.readObservationFile(FILE_NAME);
 		/*
@@ -78,8 +78,6 @@ public class CGDemo {
 
 	private static void animate(List<HeatmapFrame> frames, int index) throws InterruptedException {
 		button.setEnabled(false);
- 		//for (int i = 0; i < DIM; i++) {
-		//for(HeatmapFrame frame: frames){
 
 		while(index < frames.size()) {
 			fillGrid(grid, frames.get(index));
@@ -107,7 +105,7 @@ public class CGDemo {
 
 	static private final Color COLD = new Color(0x0a, 0x37, 0x66), HOT = Color.RED;
 	static private int offset = 0;
-	
+
 
 	private static void fillGrid(Color[][] grid, HeatmapFrame heatmapFrame) {
 		int pixels = grid.length * grid[0].length;
