@@ -26,8 +26,12 @@ public class CGDemo {
 	private static JButton button;
 	private static Color[][] grid;
 
+	private static List<HeatmapFrame> heatmapFrames;
+	private static int heatmapFrameIndex = 0;
+	private static int maxHits = 0;
+
 	// Values for generating the Observations file
-	private static int N_OBSERVATIONS = 1024; // Must be both a power of 2, and a square number, for now (4, 16, 64, 256, 1024)
+	private static int N_OBSERVATIONS = 256; // Must be both a power of 2, and a square number, for now (4, 16, 64, 256, 1024)
 	private static int N_TIME_SLICES = 20;
 	private static final String FILE_NAME = "observation_test.dat";
 
@@ -45,14 +49,16 @@ public class CGDemo {
 		/*
 		TODO implement general scan of the observations, and use the results to fill each display frame of heatmap
 		*/
+		System.out.println("Creating HeatmapScan and getting frames...");
 		HeatmapScan heatMap = new HeatmapScan(observations, N_THREADS, DIM, DIM);
-		List<HeatmapFrame> frames = heatMap.getScan();
-
+		heatmapFrames = heatMap.getScan();
+		maxHits = heatMap.getMaxHits();
+		System.out.println("Got list of " + heatmapFrames.size() + " frames, max hits was " + maxHits);
 
 		grid = new Color[DIM][DIM];
 		application = new JFrame();
 		application.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		fillGrid(grid);
+		fillGrid(grid, heatmapFrames.get(0));
 		
 		ColoredGrid gridPanel = new ColoredGrid(grid);
 		application.add(gridPanel, BorderLayout.CENTER);
@@ -64,17 +70,22 @@ public class CGDemo {
 		application.setSize(DIM * 4, (int)(DIM * 4.4));
 		application.setVisible(true);
 		application.repaint();
-		animate();
+
+		animate(heatmapFrames, 1);
 	}
 
 
 
-	private static void animate() throws InterruptedException {
+	private static void animate(List<HeatmapFrame> frames, int index) throws InterruptedException {
 		button.setEnabled(false);
- 		for (int i = 0; i < DIM; i++) { 
-			fillGrid(grid);
+ 		//for (int i = 0; i < DIM; i++) {
+		//for(HeatmapFrame frame: frames){
+
+		while(index < frames.size()) {
+			fillGrid(grid, frames.get(index));
 			application.repaint();
 			Thread.sleep(50);
+			index++;
 		}
 		button.setEnabled(true);
 		application.repaint();
@@ -85,7 +96,7 @@ public class CGDemo {
 			if (REPLAY.equals(e.getActionCommand())) {
 				new Thread(() -> {
 					 try {
-						 animate();
+						 animate(heatmapFrames, 0);
 					 } catch (InterruptedException e1) {
 						 System.exit(0);
 					 }
@@ -96,13 +107,18 @@ public class CGDemo {
 
 	static private final Color COLD = new Color(0x0a, 0x37, 0x66), HOT = Color.RED;
 	static private int offset = 0;
+	
 
-
-	private static void fillGrid(Color[][] grid) {
+	private static void fillGrid(Color[][] grid, HeatmapFrame heatmapFrame) {
 		int pixels = grid.length * grid[0].length;
-		for (int r = 0; r < grid.length; r++)
-			for (int c = 0; c < grid[r].length; c++)
-				grid[r][c] = interpolateColor((r*c+offset)%pixels / (double)pixels, COLD, HOT);
+		for (int r = 0; r < grid.length; r++) {
+			//System.out.println("Filling row " +r+" with ");
+			for (int c = 0; c < grid[r].length; c++) {
+				//grid[r][c] = interpolateColor((r * c + offset) % pixels / (double) pixels, COLD, HOT);
+				grid[r][c] = interpolateColor(heatmapFrame.frameGrid[r][c] / maxHits, COLD, HOT);
+				//System.out.println(String.format("Offset = % 3d [Row % 3d Col % 3d] Color = %s", offset, r, c, grid[r][c].toString()));
+			}
+		}
 		offset += DIM;
 	}
 	

@@ -11,7 +11,16 @@ import java.util.List;
 public class HeatmapScan extends GeneralScan<Observation, HeatmapFrame, HeatmapFrame> {
 
    private int height, width;
-   
+
+   public int getMaxHits(){
+      HeatmapFrame finalFrame = getReduction();
+      getScan();
+      int maxHits = 0;
+      for(int x = 0; x < finalFrame.frameGrid.length; x++)
+         for(int y = 0; y < finalFrame.frameGrid[x].length; y++)
+            if(finalFrame.frameGrid[x][y] > maxHits) maxHits = finalFrame.frameGrid[x][y];
+      return maxHits;
+   }
    /**
     * Constructor for HeatmapScan which uses a default level of parallelization
     * @param height 
@@ -54,6 +63,7 @@ public class HeatmapScan extends GeneralScan<Observation, HeatmapFrame, HeatmapF
     */
    @Override
    protected HeatmapFrame prepare(Observation datum) {
+
       HeatmapFrame frame = new HeatmapFrame(width, height);
       frame.addObservation(datum);
       return frame;
@@ -91,9 +101,12 @@ public class HeatmapScan extends GeneralScan<Observation, HeatmapFrame, HeatmapF
    protected HeatmapFrame gen(HeatmapFrame tally) {
       return tally;
    }
+
    @Override
    protected HeatmapFrame accum(HeatmapFrame accumulator, HeatmapFrame right){
       for(Observation o: right.observations) accumulator.addObservation(o);
       return accumulator;
    }
+
+
 }
