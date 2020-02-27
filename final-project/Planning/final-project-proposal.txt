@@ -1,0 +1,17 @@
+Ross Hoyt
+CPSC5600 – WQ2020
+Final Project Proposal
+
+For my final project , I propose to create a single-window desktop application which leverages parallel programming
+algorithms in multiple parts of its functionality.
+First, it allows the user to search directories and their sub directories recursively for MIDI. The user can choose a
+directory to scan, and the program recursively searches all sub folders for Standard MIDI files by extension
+(.mid, & .smf).
+The program then parses one or more MIDI files into a list of Note Events, and parallel programming is used to create
+a single heatmap animation of the note distributions. Additionally, the application could be extended to compare
+statistical differences in note occurrence frequencies between pieces, if I can develop the comparative mathematical
+model for this.
+The GUI window library and MIDI file parsing utilities will be provided by the JUCE C++ framework, a C++ partially
+open source library for building audio applications.
+https://github.com/WeAreROLI/JUCE
+
