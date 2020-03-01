@@ -1,6 +1,7 @@
 package hw5;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class HeatmapFrame {
@@ -10,7 +11,7 @@ public class HeatmapFrame {
    public static final double CLIPPING_SPACE_SIZE = 2.0;
 
    private double xBucketSize, yBucketSize;
-//   private int numXBuckets, numYBuckets;
+
 
    public int[][] frameGrid;
 
@@ -45,6 +46,7 @@ public class HeatmapFrame {
          addObservation(o);
    }
 
+
    private void incrementGridBucket(double x, double y) {
       incrementGridBucket(x,y,1);
    }
@@ -74,5 +76,12 @@ public class HeatmapFrame {
       }
 
       return counter;
+   }
+
+   @Override
+   public String toString() {
+      return "HeatmapFrame{" +
+            "frameGrid=" + Arrays.toString(frameGrid) +
+            '}';
    }
 }

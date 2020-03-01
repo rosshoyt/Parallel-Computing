@@ -135,7 +135,6 @@ public class Observation implements Serializable {
             e.printStackTrace();
             System.exit(1);
         }
-
         return observations;
     }
 

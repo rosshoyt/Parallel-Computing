@@ -22,12 +22,12 @@ import java.util.concurrent.RecursiveAction;
  * @param <ElemType>   data series element
  * @param <TallyType>  reduction data type
  */
-public class GeneralScan3<ElemType, TallyType> {
+public class GeneralScan<ElemType, TallyType> {
 	public static final int DEFAULT_THREAD_THRESHOLD = 10_000;
-	public GeneralScan3(List<ElemType> raw) {
+	public GeneralScan(List<ElemType> raw) {
 		this(raw, DEFAULT_THREAD_THRESHOLD);
 	}
-	public GeneralScan3(List<ElemType> raw, int thread_threshold) {
+	public GeneralScan(List<ElemType> raw, int thread_threshold) {
 		reduced = false;
 		n = raw.size();
 		data = raw;

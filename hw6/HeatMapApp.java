@@ -18,12 +18,12 @@ import java.util.List;
 /**
  * Step 5 from HW5
  */
-public class HeatMap5 {
+public class HeatMapApp {
 	private static final int DIM = 20;
 	private static final int SLEEP_INTERVAL = 50; // milliseconds
 	private static final String FILENAME = "observation_gaussian.dat";
 	private static final Color COLD = new Color(0x0a, 0x37, 0x66), HOT = Color.RED;
-	private static final double HOT_CALIB = 1.0;
+	private static final double HOT_CALIB = 2.0;
 	private static final String REPLAY = "Replay";
 	private static JFrame application;
 	private static JButton button;
@@ -31,35 +31,10 @@ public class HeatMap5 {
 	private static int current;
 	private static List<HeatMap> heatmaps;
 
-	static class HeatScan extends GeneralScan3<Observation, HeatMap> {
 
-		public HeatScan(List<Observation> raw) {
-			super(raw, 100);
-		}
-
-		@Override
-		protected HeatMap init() {
-			return new HeatMap();
-		}
-
-		@Override
-		protected HeatMap prepare(Observation datum) {
-			return new HeatMap(datum.x, datum.y);
-		}
-
-		@Override
-		protected HeatMap combine(HeatMap left, HeatMap right) {
-			return HeatMap.combine(left, right);
-		}
-
-		@Override
-		protected void accum(HeatMap hm, Observation datum) {
-			hm.accum(datum.x, datum.y);
-		}
-	}
 
 	public static void main(String[] args) throws FileNotFoundException, InterruptedException {
-		List<Observation> data = new ArrayList<Observation>();
+		List<Observation> data = new ArrayList<>();
 		try {
 			ObjectInputStream in = new ObjectInputStream(new FileInputStream(FILENAME));
 			// int count = 0;
@@ -78,6 +53,7 @@ public class HeatMap5 {
 
 		HeatScan scanner = new HeatScan(data);
 		// System.out.println("reduction: " + scanner.getReduction());
+		scanner.getScan(10);
 		heatmaps = scanner.getScan();
 		current = 0;
 

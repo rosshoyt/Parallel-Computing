@@ -7,6 +7,7 @@ package hw5;
 import java.util.List;
 
 public class DoubleSumHeap extends GeneralScan<Double, Double, Double>{
+
    public DoubleSumHeap(List<Double> raw) {
       super(raw);
    }

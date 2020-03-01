@@ -8,6 +8,7 @@ package hw5;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -31,7 +32,7 @@ public class CGDemo {
 	private static int maxHits = 0;
 
 	// Values for generating the Observations file
-	private static int N_OBSERVATIONS = 256; // Must be both a power of 2, and a square number, for now (4, 16, 64, 256, 1024)
+	private static int N_OBSERVATIONS = 64; // Must be both a power of 2, and a square number, for now (4, 16, 64, 256, 1024)
 	private static int N_TIME_SLICES = 20;
 	private static final String FILE_NAME = "observation_test.dat";
 
@@ -54,6 +55,7 @@ public class CGDemo {
 		heatmapFrames = heatMap.getScan();
 		maxHits = heatMap.getMaxHits();
 		System.out.println("Got list of " + heatmapFrames.size() + " frames, max hits was " + maxHits);
+		System.out.println(Arrays.toString(heatmapFrames.toArray()));
 
 		grid = new Color[DIM][DIM];
 		application = new JFrame();
